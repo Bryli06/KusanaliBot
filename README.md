@@ -1,2 +1,3 @@
-# Kusanali-Bot
-A discord bot made for the Kusanali bot in the The Academia | Kusanali Mains discord server.
+# Kusanali Bot
+
+A discord bot made for [The Academia | Kusanali Mains](https://discord.gg/kusanali) discord server.
