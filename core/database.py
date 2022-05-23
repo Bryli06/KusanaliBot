@@ -10,10 +10,12 @@ class database:
     def __init__(self, bot):
         self.bot = bot
         self.db = None
+
         try:
             # gets kusanalibot database in db
             self.db = motor.AsyncIOMotorClient(
                 bot.settings["pymongo_uri"]).kusanalibot
+
         except ConfigurationError as e:
             logger.error(f"MongoDB connection error: {e}")
             sys.exit(0)
@@ -30,18 +32,21 @@ class database:
             logger.error("Error with database connection.")
             error = f"{type(e).__name__}: {str(e)}"
             logger.error(error)
+
             if "CERTIFICATE_VERIFY_FAILED" in error and ssl_retry:
                 uri = self.bot.settings["pymongo_uri"]
                 logger.critical("Invalid SSL certificate")
                 self.db = motor.AsyncIOMotorClient(
                     uri, tlsAllowInvalidCertificates=True).kusanalibot
+                    
                 return await self.validate_connection(ssl_retry=False)
 
             if "ServerSelectionTimeoutError" in error:
-                logger.critical("not whitelist ip")
+                logger.critical("IP not whitelisted.")
 
             if "OperationFailure" in error:
-                logger.critical("invalid credentials")
+                logger.critical("Invalid credentials.")
+
             raise
 
-        logger.info("successful connection")
+        logger.info("Successful connection.")

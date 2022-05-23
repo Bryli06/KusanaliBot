@@ -28,18 +28,19 @@ class KusanaliBot(commands.Bot):
         self.connected = asyncio.Event()
 
         self.start_time = datetime.utcnow()
-        self.onstart()
+        self.on_start()
 
-    def onstart(self):
+    def on_start(self):
         for cog in [file.replace('.py', '') for file in listdir("cogs") if isfile(join('cogs', file))]:
             logger.info(f"Loading cog: {cog}")
+
             try:
                 self.load_extension('cogs' + '.' + cog)
                 logger.info(f"Successfully loaded {cog}")
             except Exception:
                 logger.error(f"Failed to log {cog}")
 
-    def getSession(self):
+    def get_session(self):
         if self.session is None:
             self.session = ClientSession(loop=self.loop)
         return self.session
@@ -61,6 +62,5 @@ class KusanaliBot(commands.Bot):
 
 
 if __name__ == '__main__':
-
     bot = KusanaliBot()
     bot.run()
