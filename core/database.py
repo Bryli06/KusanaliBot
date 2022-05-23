@@ -1,9 +1,9 @@
 import sys
 import motor.motor_asyncio as motor  # motor instead of mongoclient for async
 from pymongo.errors import ConfigurationError
-from logger import getLogger
+from logger import get_logger
 
-logger = getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class database:

@@ -1,12 +1,12 @@
 import discord
 from discord.ext import commands
 
-from core.models import PermissionLevel
+from core.checks import PermissionLevel
 from core import calculate_level, checks
-from core.models import getLogger
+from core.logger import get_logger
 
 from collections import OrderedDict
-logger = getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class Leveling(commands.Cog):

@@ -27,7 +27,7 @@ ch = logging.StreamHandler(stream=sys.stdout)
 ch.setLevel(logging.INFO)
 
 
-def getLogger(name):
+def get_logger(name):
     logger = logging.getLogger(name)
     logger.addHandler(ch)
     logger.setLevel(logging.INFO)

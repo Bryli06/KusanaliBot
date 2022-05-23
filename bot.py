@@ -7,13 +7,13 @@ from os.path import isfile, join
 import asyncio
 from aiohttp import ClientSession
 from datetime import datetime
-from core.logger import getLogger
+from core.logger import get_logger
 import uvloop
 
 from core.database import database
 from core.settings import Settings
 
-logger = getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class KusanaliBot(commands.Bot):
@@ -52,11 +52,11 @@ class KusanaliBot(commands.Bot):
         self.api.validate_connection
 
         await self.settings.load()
-        self._connected.set()
+        self.connected.set()
 
     async def on_ready(self):
-        await self.wait_until_read()
-        await self._connected.wait()
+        await self.wait_until_ready()
+        await self.connected.wait()
         await self.settings.ready
         # add a bunch of logger stuff telling bot info
 
