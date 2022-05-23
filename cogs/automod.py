@@ -19,7 +19,7 @@ class AutoMod(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.db = bot.api.get_plugin_partition(self)
+        self.db = bot.api.get_collection(self._id)
         self.cache = {}
 
         self.bot.loop.create_task(self.load_cache())  # this only runs once xD
