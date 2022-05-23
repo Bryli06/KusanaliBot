@@ -92,7 +92,7 @@ class AutoMod(commands.Cog):
         - %case (case sensitive searching)
 
         """
-        
+
         return await ctx.send_help("blacklist")
 
     # Adds a word to the blacklist. Takes in a word to word/phrase to blacklist first followed by flags. Flags will start with the prefix %. Possible flags include %whole, %delete, %warn, etc.

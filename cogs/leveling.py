@@ -125,7 +125,8 @@ class Leveling(commands.Cog):
 
         cache = self.cache["userExpData"]
 
-        sort = sorted(cache.items(), key=lambda x: x[1], reverse=True)[start: end]
+        sort = sorted(cache.items(), key=lambda x: x[1], reverse=True)[
+            start: end]
 
         description = ""
 

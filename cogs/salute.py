@@ -96,7 +96,7 @@ class Salute(commands.Cog):
         if self.cache["embeds"]["wlcEmbed"] is not None and self.cache["embeds"]["wlcEmbed"] != "":
             wlc_embed = copy.deepcopy(self.cache["embeds"]["wlcEmbed"])
             wlc_embed["description"] = await self.translate_message(member, wlc_embed["description"], channel)
-            
+
             await channel.send(embed=await self.json_to_embed(wlc_embed))
 
     @commands.Cog.listener()
@@ -110,7 +110,7 @@ class Salute(commands.Cog):
         if self.cache["embeds"]["frwEmbed"] is not None and self.cache["embeds"]["frwEmbed"] != "":
             frw_embed = copy.deepcopy(self.cache["embeds"]["frwEmbed"])
             frw_embed["description"] = await self.translate_message(member, frw_embed["description"], channel)
-            
+
             await channel.send(embed=await self.json_to_embed(frw_embed))
 
     @commands.group(name="salute", aliases=['slt'], invoke_without_command=True)
@@ -234,7 +234,7 @@ class Salute(commands.Cog):
         if self.cache["embeds"]["frwEmbed"] is not None and self.cache["embeds"]["frwEmbed"] != "":
             frw_embed = copy.deepcopy(self.cache["embeds"]["frwEmbed"])
             frw_embed["description"] = await self.translate_message(ctx.author, frw_embed["description"], frw_channel)
-            
+
             await frw_channel.send(embed=await self.json_to_embed(frw_embed))
         else:
             await frw_channel.send("No farewell embed set.")
@@ -276,8 +276,8 @@ class Salute(commands.Cog):
         Lists the channels you set for welcome/farewell messages.
 
         """
-        
-        await ctx.send("Welcome channel: " + self.bot.get_channel(int(self.cache["channels"]["wlcChannel"])).mention+ "!")
+
+        await ctx.send("Welcome channel: " + self.bot.get_channel(int(self.cache["channels"]["wlcChannel"])).mention + "!")
         await ctx.send("Farewell channel: " + self.bot.get_channel(int(self.cache["channels"]["frwChannel"])).mention + "!")
 
     @_wlc_msg.command(name="set")
@@ -293,7 +293,7 @@ class Salute(commands.Cog):
         -`{{mention}}: mentions the user`
         -`{{user}}: writes the user's name`
         -`{{channel}}: mentions the current channel`
-        
+
         """
 
         self.cache["messages"]["wlcMessage"] = message
@@ -306,14 +306,13 @@ class Salute(commands.Cog):
     async def wlc_msg_clear(self, ctx):
         """
         Clears the welcome message.
-        
+
         """
 
         self.cache["messages"]["wlcMessage"] = ""
 
         await self.update_db()
         await ctx.send("Welcome message cleared.")
-
 
     @_wlc_emb.command(name="set")
     @checks.has_permissions(PermissionLevel.ADMINISTRATOR)
@@ -328,7 +327,7 @@ class Salute(commands.Cog):
         -`{{mention}}: mentions the user`
         -`{{user}}: writes the user's name`
         -`{{channel}}: mentions the current channel`
-        
+
         """
 
         self.cache["embeds"]["wlcEmbed"] = await self.pastebin_to_json(url)
@@ -341,7 +340,7 @@ class Salute(commands.Cog):
     async def wlc_emb_clear(self, ctx):
         """
         Clears the welcome embed.
-        
+
         """
 
         self.cache["embeds"]["wlcEmbed"] = ""
@@ -362,7 +361,7 @@ class Salute(commands.Cog):
         -`{{mention}}: mentions the user`
         -`{{user}}: writes the user's name`
         -`{{channel}}: mentions the current channel`
-        
+
         """
 
         self.cache["messages"]["frwMessage"] = message
@@ -375,14 +374,13 @@ class Salute(commands.Cog):
     async def frw_msg_clear(self, ctx):
         """
         Clears the farewell message.
-        
+
         """
 
         self.cache["messages"]["frwMessage"] = ""
 
         await self.update_db()
         await ctx.send("Farewell message cleared.")
-
 
     @_frw_emb.command(name="set")
     @checks.has_permissions(PermissionLevel.ADMINISTRATOR)
@@ -397,7 +395,7 @@ class Salute(commands.Cog):
         -`{{mention}}: mentions the user`
         -`{{user}}: writes the user's name`
         -`{{channel}}: mentions the current channel`
-        
+
         """
 
         self.cache["embeds"]["frwEmbed"] = await self.pastebin_to_json(url)
@@ -419,5 +417,7 @@ class Salute(commands.Cog):
         await ctx.send("Farewell embed cleared.")
 
 # test
+
+
 def setup(bot):
     bot.add_cog(Salute(bot))

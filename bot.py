@@ -1,15 +1,20 @@
 import discord
+from discord.ext import commands
+
 from os import listdir
 from os.path import isfile, join
-from discord.ext import commands
+
 import asyncio
 from aiohttp import ClientSession
 from datetime import datetime
 from core.logger import getLogger
 import uvloop
+
 from core.database import database
 from core.settings import Settings
+
 logger = getLogger(__name__)
+
 
 class KusanaliBot(commands.Bot):
     def __init__(self):
@@ -38,9 +43,8 @@ class KusanaliBot(commands.Bot):
         if self.session is None:
             self.session = ClientSession(loop=self.loop)
         return self.session
-    
 
-    def run(self):
+    async def run(self):
         await self.start(self.settings["bot_token"])
 
     async def on_connect(self):
@@ -53,7 +57,7 @@ class KusanaliBot(commands.Bot):
         await self.wait_until_read()
         await self._connected.wait()
         await self.settings.ready
-        #add a bunch of logger stuff telling bot info 
+        # add a bunch of logger stuff telling bot info
 
 
 if __name__ == '__main__':
