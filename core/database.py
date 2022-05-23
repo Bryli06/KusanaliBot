@@ -20,7 +20,7 @@ class database:
             logger.error(f"MongoDB connection error: {e}")
             sys.exit(0)
 
-        self.session = bot.getSession()
+        self.session = bot.get_session()
 
     async def get_collection(self, coll):
         return self.db[coll]
@@ -38,7 +38,7 @@ class database:
                 logger.critical("Invalid SSL certificate")
                 self.db = motor.AsyncIOMotorClient(
                     uri, tlsAllowInvalidCertificates=True).kusanalibot
-                    
+
                 return await self.validate_connection(ssl_retry=False)
 
             if "ServerSelectionTimeoutError" in error:
