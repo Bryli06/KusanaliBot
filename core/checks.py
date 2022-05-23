@@ -50,7 +50,7 @@ async def check_permissions(ctx, permission_level) -> bool:
     if permission_level is PermissionLevel.REGULAR:
         return True
 
-    if permission_level not in PermissionLevel:
+    if permission_level is None:
         logger.error(f"Invalid permission level: {permission_level.__str__}")
 
     return False
