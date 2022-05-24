@@ -63,4 +63,4 @@ class KusanaliBot(commands.Bot):
 
 if __name__ == '__main__':
     bot = KusanaliBot()
-    bot.run()
+    asyncio.run(bot.run())
