@@ -34,7 +34,7 @@ class KusanaliBot(commands.Bot):
         for cog in [file.replace('.py', '') for file in listdir("cogs") if isfile(join('cogs', file))]:
             logger.info(f"Loading cog: {cog}")
 
-            logger.debug('cogs' + '.' + cog)
+            logger.info('cogs' + '.' + cog)
 
             try:
                 self.load_extension('cogs' + '.' + cog)
