@@ -97,7 +97,7 @@ class AutoMod(commands.Cog):
         return banned_word in content
 
     # Adds a word to the blacklist. Takes in a word to word/phrase to blacklist first followed by flags. Flags will start with the prefix %. Possible flags include %whole, %delete, %warn, etc.
-    @_bl.slash_command(name="add", description="Blacklist a word with given flags.")
+    @commands.slash_command(name="add", description="Blacklist a word with given flags.")
     @checks.has_permissions(PermissionLevel.ADMINISTRATOR)
     async def bl_add(self, ctx, banned_word: discord.Option(str, "The word you want to ban."),
                      *flags: discord.Option(str, "The flags for the given word", choices=valid_flags)):
@@ -121,7 +121,7 @@ class AutoMod(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @_bl.slash_command(name="remove", description="Remove a word from the blacklist.")
+    @commands.slash_command(name="remove", description="Remove a word from the blacklist.")
     @checks.has_permissions(PermissionLevel.ADMINISTRATOR)
     async def bl_remove(self, ctx, banned_word: discord.Option(str, "The word you want to unban.")):
         """
@@ -150,7 +150,7 @@ class AutoMod(commands.Cog):
         await ctx.send(embed=embed)
 
     # Lists all the banned words in the cache
-    @_bl.slash_command(name="list", description="Lists all the blacklisted words and their flags.")
+    @commands.slash_command(name="list", description="Lists all the blacklisted words and their flags.")
     @checks.has_permissions(PermissionLevel.ADMINISTRATOR)
     async def bl_list(self, ctx):
         """
