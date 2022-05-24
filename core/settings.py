@@ -20,6 +20,10 @@ class Settings:
         self.bot = bot
         self.cache = {}
 
+    def __getitem__(self, setting):
+        return self.cache[setting]
+
+
     def load_cache(self) -> dict:
         data = deepcopy(Settings.bot_config)
 

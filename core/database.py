@@ -6,7 +6,7 @@ from core.logger import get_logger
 logger = get_logger(__name__)
 
 
-class database:
+class Database:
     def __init__(self, bot):
         self.bot = bot
         self.db = None

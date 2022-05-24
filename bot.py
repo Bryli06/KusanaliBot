@@ -10,7 +10,7 @@ from datetime import datetime
 from core.logger import get_logger
 import uvloop
 
-from core.database import database
+from core.database import Database
 from core.settings import Settings
 
 logger = get_logger(__name__)
@@ -23,7 +23,7 @@ class KusanaliBot(commands.Bot):
         self.settings.load_cache()
 
         self.session = None
-        self.api = database(self)
+        self.api = Database(self)
         self.db = self.api.db
         self.connected = asyncio.Event()
 
