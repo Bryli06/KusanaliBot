@@ -16,6 +16,8 @@ logger = get_logger(__name__)
 class AutoMod(commands.Cog):
     _id = "automod"
 
+    testbot: commands.Bot = None
+
     # can also be warn ban kick mute but not implemented yet
     valid_flags = {OptionChoice("Delete", "delete"), OptionChoice(
         "Whole", "whole"), OptionChoice("Case", "case")}
@@ -33,7 +35,9 @@ class AutoMod(commands.Cog):
         self.db = bot.api.get_collection(self._id)
         self.cache = {}
 
-        self.guild_ids = {"977013237889523712"}
+        self.testbot = self.bot
+
+        self.guild_ids = {977013237889523712}
         logger.debug(f"{self.guild_ids}")
 
         self.bot.loop.create_task(self.load_cache())  # this only runs once xD
@@ -54,13 +58,13 @@ class AutoMod(commands.Cog):
 
         self.cache = db
 
-    @commands.command("test")
+    @testbot.slash_command(guild_ids=[977013237889523712])
     async def test(self, ctx):
-        ctx.send("Works!")
+        await ctx.send("Works!")
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
-        message.channel.send(f"{self.guild_ids}")
+        await message.channel.send(f"{self.guild_ids}")
 
         if message.author.bot:
             return
