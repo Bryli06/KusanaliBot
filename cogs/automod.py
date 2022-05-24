@@ -3,7 +3,7 @@ from random import choice, choices
 import discord
 from discord.ext import commands
 
-from discord import OptionChoice, SlashCommandGroup as slashgroup
+from discord import OptionChoice, SlashCommandGroup, slash_command
 
 from core.checks import PermissionLevel
 from core import checks
@@ -20,22 +20,23 @@ class AutoMod(commands.Cog):
     valid_flags = {OptionChoice("Delete", "delete"), OptionChoice(
         "Whole", "whole"), OptionChoice("Case", "case")}
 
-    guild_ids = {}
-
     default_cache = {  # can also store more stuff like warn logs or notes for members if want to implement in future
         "bannedWords": {  # dictionary of word and an array of it's flags
 
         }
     }
 
+    _bl: SlashCommandGroup
+
     def __init__(self, bot):
         self.bot = bot
         self.db = bot.api.get_collection(self._id)
         self.cache = {}
 
-        self.testbot = self.bot
-
         self.guild_ids = {977013237889523712}
+
+        self._bl = self.bot.create_group(name="blacklist", description="Manages blacklisted words.", guild_ids=self.guild_ids)
+
         logger.debug(f"{self.guild_ids}")
 
         self.bot.loop.create_task(self.load_cache())  # this only runs once xD
@@ -95,24 +96,8 @@ class AutoMod(commands.Cog):
 
         return banned_word in content
 
-    @slashgroup.subgroup(name="blacklist", description="Manages blacklisted words.", guild_ids=guild_ids)
-    @checks.has_permissions(PermissionLevel.ADMINISTRATOR)
-    async def _bl(self, ctx):
-        """
-        Manages blacklisted words.
-
-        First, to blacklist a word, use the command:
-        - `{prefix}bl add blacklisted_word flags`
-
-        Current flags supported include:
-        - %whole (makes sure that the blacklisted word is alone)
-        - %delete (deletes all blacklisted words)
-        - %case (case sensitive searching)
-
-        """
-
     # Adds a word to the blacklist. Takes in a word to word/phrase to blacklist first followed by flags. Flags will start with the prefix %. Possible flags include %whole, %delete, %warn, etc.
-    @_bl.slash_command(name="add", description="Blacklist a word with given flags.", guild_ids=guild_ids)
+    @_bl.slash_command(name="add", description="Blacklist a word with given flags.")
     @checks.has_permissions(PermissionLevel.ADMINISTRATOR)
     async def bl_add(self, ctx, banned_word: discord.Option(str, "The word you want to ban."),
                      *flags: discord.Option(str, "The flags for the given word", choices=valid_flags)):
