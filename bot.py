@@ -51,7 +51,6 @@ class KusanaliBot(commands.Bot):
     async def on_connect(self):
         self.api.validate_connection
 
-        await self.settings.load()
         self.connected.set()
 
     async def on_ready(self):

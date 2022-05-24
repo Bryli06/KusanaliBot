@@ -27,13 +27,10 @@ class Settings:
     def load_cache(self) -> dict:
         data = deepcopy(Settings.bot_config)
 
-          # loads data from enviorment variables
+        # loads data from enviorment variables
         data.update({k.lower(): v for k, v in os.environ.items()
                     if k.lower() in Settings.bot_config})
 
         self.cache = data
-        # add load from db
-        return data
 
-    def load(self) -> dict:
-        pass  # implement load data from db
+        return data
