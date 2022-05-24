@@ -4,11 +4,31 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-pycord = "*"
-motor = "*"
-colorama = "*"
+aiohttp = "==3.7.4.post0"
+async-timeout = "==3.0.1"
+attrs = "==21.4.0"
+autopep8 = "==1.6.0"
+certifi = "==2022.5.18.1"
+chardet = "==4.0.0"
+charset-normalizer = "==2.0.12"
+colorama = "==0.4.4"
+docopt = "==0.6.2"
+idna = "==3.3"
+motor = "==3.0.0"
+multidict = "==6.0.2"
+py-cord = "==2.0.0rc1"
+pycodestyle = "==2.8.0"
+pymongo = "==4.1.1"
+python-dotenv = "==0.20.0"
+requests = "==2.27.1"
+toml = "==0.10.2"
+typing-extensions = "==4.2.0"
+urllib3 = "==1.26.9"
+uvloop = "==0.16.0"
+yarg = "==0.1.9"
+yarl = "==1.7.2"
 
 [dev-packages]
 
 [requires]
-python_version = "3.9"
+python_version = "3.8"
