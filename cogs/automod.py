@@ -103,7 +103,7 @@ class AutoMod(commands.Cog):
     async def bl_add(self, ctx, banned_word: discord.Option(str, "The word you want to ban."),
                      *flags: discord.Option(str, "The flags for the given word", choices=valid_flags)):
         """
-        Blacklist a word with given flags.
+        Blacklist a word with the given flags.
 
         """
 

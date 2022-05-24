@@ -22,6 +22,8 @@ class KusanaliBot(commands.Bot):
         self.settings = Settings(self)
         self.settings.load_cache()
 
+        self.bot = self
+
         self.session = None
         self.api = Database(self)
         self.db = self.api.db
@@ -29,6 +31,12 @@ class KusanaliBot(commands.Bot):
 
         self.start_time = datetime.utcnow()
         self.on_start()
+
+    bot: commands.Bot = None
+    @bot.command("test", guild_ids={977013237889523712})
+    async def test(self, ctx):
+        ctx.send("test")
+
 
     def on_start(self):
         for cog in [file.replace('.py', '') for file in listdir("cogs") if isfile(join('cogs', file))]:
