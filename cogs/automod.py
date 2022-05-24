@@ -94,6 +94,10 @@ class AutoMod(commands.Cog):
 
         return banned_word in content
 
+    @commands.command("test", guild_ids={977013237889523712})
+    async def test(self, ctx):
+        ctx.send("test")
+
     # Adds a word to the blacklist. Takes in a word to word/phrase to blacklist first followed by flags. Flags will start with the prefix %. Possible flags include %whole, %delete, %warn, etc.
     @commands.slash_command(name="add", description="Blacklist a word with given flags.", guild_ids={977013237889523712})
     async def bl_add(self, ctx, banned_word: discord.Option(str, "The word you want to ban."),
