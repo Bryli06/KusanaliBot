@@ -34,11 +34,13 @@ class KusanaliBot(commands.Bot):
         for cog in [file.replace('.py', '') for file in listdir("cogs") if isfile(join('cogs', file))]:
             logger.info(f"Loading cog: {cog}")
 
+            logger.debug('cogs' + '.' + cog)
+
             try:
                 self.load_extension('cogs' + '.' + cog)
                 logger.info(f"Successfully loaded {cog}")
             except Exception:
-                logger.error(f"Failed to log {cog}")
+                logger.error(f"Failed to load {cog}")
 
     def get_session(self):
         if self.session is None:
