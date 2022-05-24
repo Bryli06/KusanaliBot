@@ -39,8 +39,9 @@ class KusanaliBot(commands.Bot):
             try:
                 self.load_extension('cogs' + '.' + cog)
                 logger.info(f"Successfully loaded {cog}")
-            except Exception:
+            except Exception as e:
                 logger.error(f"Failed to load {cog}")
+                logger.error(f"Error: {e}")
 
     def get_session(self):
         if self.session is None:
