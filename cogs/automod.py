@@ -8,6 +8,10 @@ from discord import OptionChoice, SlashCommandGroup as slashgroup
 from core.checks import PermissionLevel
 from core import checks
 
+from core.logger import get_logger
+
+logger = get_logger(__name__)
+
 
 class AutoMod(commands.Cog):
     _id = "automod"
@@ -30,6 +34,7 @@ class AutoMod(commands.Cog):
         self.cache = {}
 
         self.guild_ids = self.bot.guilds
+        logger.debug(f"{self.guild_ids}")
 
         self.bot.loop.create_task(self.load_cache())  # this only runs once xD
 
