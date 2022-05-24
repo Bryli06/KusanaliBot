@@ -1,5 +1,8 @@
+import imp
 import discord
 from discord.ext import commands
+
+import sys
 
 from os import listdir
 from os.path import isfile, join
@@ -18,12 +21,9 @@ logger = get_logger(__name__)
 
 class KusanaliBot(commands.Bot):
     def __init__(self):
-        super().__init__(intents=discord.Intents.all())
+        super().__init__(intents=discord.Intents.all(), debug_guilds=[977013237889523712])
         self.settings = Settings(self)
         self.settings.load_cache()
-
-        self.bot = self
-        self.debug_guilds = None # censored
 
         self.session = None
         self.api = Database(self)
@@ -44,25 +44,120 @@ class KusanaliBot(commands.Bot):
                 logger.error(f"Failed to load {cog}")
                 logger.error(f"Error: {e}")
 
-    def get_session(self):
+    async def get_session(self):
         if self.session is None:
             self.session = ClientSession(loop=self.loop)
         return self.session
 
-    async def run(self):
-        await self.start(self.settings["bot_token"])
+    def run(self):
+        loop = self.loop
 
-    async def on_connect(self):
-        self.api.validate_connection
+        async def runner():
+            try:
+                retry_intents = False
+                try:
+                    await self.start(self.settings["bot_token"])
+                except discord.PrivilegedIntentsRequired:
+                    retry_intents = True
+                if retry_intents:
+                    await self.http.close()
+                    if self.ws is not None and self.ws.open:
+                        await self.ws.close(code=1000)
+                    self._ready.clear()
+                    intents = discord.Intents.default()
+                    intents.members = True
+                    # Try again with members intent
+                    self._connection._intents = intents
+                    logger.warning(
+                        "Attempting to login with only the server members privileged intent. Some plugins might not work correctly."
+                    )
+                    await self.start(self.token)
+            except discord.PrivilegedIntentsRequired:
+                logger.critical(
+                    "Privileged intents are not explicitly granted in the discord developers dashboard."
+                )
+            except discord.LoginFailure:
+                logger.critical("Invalid token")
+            except Exception:
+                logger.critical("Fatal exception", exc_info=True)
+            finally:
+                if not self.is_closed():
+                    await self.close()
+                if self.session:
+                    await self.session.close()
 
-        self.connected.set()
+        # noinspection PyUnusedLocal
+        def stop_loop_on_completion(f):
+            loop.stop()
 
-    async def on_ready(self):
-        await self.wait_until_ready()
-        await self.connected.wait()
-        # add a bunch of logger stuff telling bot info
+        def _cancel_tasks():
+            if sys.version_info < (3, 8):
+                task_retriever = asyncio.Task.all_tasks
+            else:
+                task_retriever = asyncio.all_tasks
+
+            tasks = {t for t in task_retriever(loop=loop) if not t.done()}
+
+            if not tasks:
+                return
+
+            logger.info("Cleaning up after %d tasks.", len(tasks))
+            for task in tasks:
+                task.cancel()
+
+            loop.run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
+            logger.info("All tasks finished cancelling.")
+
+            for task in tasks:
+                if task.cancelled():
+                    continue
+                if task.exception() is not None:
+                    loop.call_exception_handler(
+                        {
+                            "message": "Unhandled exception during Client.run shutdown.",
+                            "exception": task.exception(),
+                            "task": task,
+                        }
+                    )
+
+        future = asyncio.ensure_future(runner(), loop=loop)
+        future.add_done_callback(stop_loop_on_completion)
+        try:
+            loop.run_forever()
+        except KeyboardInterrupt:
+            logger.info("Received signal to terminate bot and event loop.")
+        finally:
+            future.remove_done_callback(stop_loop_on_completion)
+            logger.info("Cleaning up tasks.")
+
+            try:
+                _cancel_tasks()
+                if sys.version_info >= (3, 6):
+                    loop.run_until_complete(loop.shutdown_asyncgens())
+            finally:
+                logger.info("Closing the event loop.")
+
+        if not future.cancelled():
+            try:
+                return future.result()
+            except KeyboardInterrupt:
+                # I am unsure why this gets raised here but suppress it anyway
+                return None
 
 
-if __name__ == '__main__':
+def main():
+    try:
+        # noinspection PyUnresolvedReferences
+        import uvloop
+
+        logger.debug("Setting up with uvloop.")
+        uvloop.install()
+    except ImportError:
+        pass
+
     bot = KusanaliBot()
-    asyncio.run(bot.run())
+    bot.run()
+
+
+if __name__ == "__main__":
+    main()

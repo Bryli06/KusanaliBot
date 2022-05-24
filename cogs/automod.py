@@ -1,12 +1,8 @@
-import imp
-from random import choice, choices
 import discord
 from discord.ext import commands
+from discord.ui import Select, View
 
-from discord import OptionChoice, SlashCommandGroup, slash_command
-
-from core.checks import PermissionLevel
-from core import checks
+from discord import ApplicationContext, Interaction, OptionChoice, SlashCommandGroup
 
 from core.logger import get_logger
 
@@ -26,18 +22,15 @@ class AutoMod(commands.Cog):
         }
     }
 
-    _bl = SlashCommandGroup(name="blacklist", description="Manages blacklisted words.", guild_ids=[977013237889523712])
+    _bl = SlashCommandGroup(
+        name="blacklist", description="Manages blacklisted words.", guild_ids=[977013237889523712])
 
     def __init__(self, bot):
         self.bot = bot
-        self.db = bot.api.get_collection(self._id)
+        self.db = self.bot.db[self._id]
         self.cache = {}
 
-        self.bot.loop.create_task(self.load_cache())  # this only runs once xD
-
-    @slash_command(name="test", description="Test command")
-    async def test(self, ctx):
-        ctx.send("test")
+        self.bot.loop.create_task(self.load_cache())
 
     async def update_db(self):  # updates database with cache
         await self.db.find_one_and_update(
@@ -47,8 +40,6 @@ class AutoMod(commands.Cog):
         )
 
     async def load_cache(self):
-        await self.bot.wait_for_connected()
-
         db = await self.db.find_one({"_id": self._id})
         if db is None:
             db = self.default_cache
@@ -57,9 +48,6 @@ class AutoMod(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
-        if message.author.id == 906318377432281088:
-            await message.channel.send("working")
-
         if message.author.bot:
             return
 
@@ -76,6 +64,9 @@ class AutoMod(commands.Cog):
         # delete message
         if delete:
             await message.delete()
+
+            dm_channel = await message.author.create_dm()
+            await dm_channel.send("Your message was deleted due to it containing a banned word.")
 
     async def find_banned_word(self, message, banned_word, whole=False, case=False):
         content = message.content
@@ -96,31 +87,63 @@ class AutoMod(commands.Cog):
         return banned_word in content
 
     # Adds a word to the blacklist. Takes in a word to word/phrase to blacklist first followed by flags. Flags will start with the prefix %. Possible flags include %whole, %delete, %warn, etc.
-    @_bl.command(name="add", description="Blacklist a word with given flags.", guild_ids=[977013237889523712])
-    async def bl_add(self, ctx, banned_word: discord.Option(str, "The word you want to ban."),
-                     *flags: discord.Option(str, "The flags for the given word", choices=valid_flags)):
+    @_bl.command(name="add", description="Blacklist a word with given flags.")
+    async def bl_add(self, ctx: ApplicationContext, banned_word: discord.Option(str, "The word you want to ban.")):
         """
         Blacklist a word with given flags.
 
         """
 
-        if banned_word in self.cache["bannedWords"]:
-            await ctx.send("Word already blacklisted")
-            return
-
-        self.cache["bannedWords"].update({banned_word: flags[0:]})
-        await self.update_db()
-
-        embed = discord.Embed(
-            title="Success.",
-            description=f"{banned_word} was added to the blacklist.",
-            color=self.bot.main_color,
+        flags = Select(
+            placeholder="Select flags",
+            min_values=1,
+            max_values=3,
+            options=[
+                discord.SelectOption(
+                    label="Delete",
+                    value="delete",
+                    description="Deletes the message."
+                ),
+                discord.SelectOption(
+                    label="Whole",
+                    value="whole",
+                    description="Blacklists whole messages."
+                ),
+                discord.SelectOption(
+                    label="Case",
+                    value="case",
+                    description="Blacklists case sensitive messages."
+                )
+            ]
         )
 
-        await ctx.send(embed=embed)
+        if banned_word in self.cache["bannedWords"]:
+            embed = discord.Embed(
+                title="Word already banned",
+                description=f"{banned_word} is blacklisted"
+            )
+
+            await ctx.respond(embed=embed)
+            return
+
+        async def _callback(interaction: Interaction):
+            self.cache["bannedWords"].update({banned_word: flags.values})
+            await self.update_db()
+
+            embed = discord.Embed(
+                title="Success!",
+                description=f"{banned_word} was added to the blacklist."
+            )
+
+            await ctx.respond(embed=embed)
+
+        flags.callback = _callback
+
+        flag_view = View(flags)
+        await ctx.respond(view=flag_view, ephemeral=True)
 
     @_bl.command(name="remove", description="Remove a word from the blacklist.")
-    async def bl_remove(self, ctx, banned_word: discord.Option(str, "The word you want to unban."), guild_ids=[977013237889523712]):
+    async def bl_remove(self, ctx, banned_word: discord.Option(str, "The word you want to unban.")):
         """
         Remove a word from the blacklist.
 
@@ -129,29 +152,27 @@ class AutoMod(commands.Cog):
         if self.cache["bannedWords"].pop(banned_word, "Word not found") == "Word not found":
             embed = discord.Embed(
                 title="Error: Argument not found",
-                description=f"{banned_word} was not blacklisted",
-                color=self.bot.error_color,
+                description=f"{banned_word} was not blacklisted"
             )
 
-            ctx.send(embed=embed)
+            ctx.respond(embed=embed)
             return
 
         await self.update_db()
 
         embed = discord.Embed(
-            title="Success.",
-            description=f"{banned_word} was removed from blacklist.",
-            color=self.bot.main_color,
+            title="Success!",
+            description=f"{banned_word} was removed from blacklist."
         )
 
-        await ctx.send(embed=embed)
+        await ctx.respond(embed=embed)
 
     # Lists all the banned words in the cache
-    @_bl.command(name="list", description="Lists all the blacklisted words and their flags.", guild_ids=[977013237889523712])
-    async def bl_list(self, ctx):
+    @_bl.command(name="list", description="Lists all the blacklisted words and their flags.")
+    async def bl_list(self, ctx: ApplicationContext):
         """
         Lists all the blacklisted words and their flags.
-        
+
         """
 
         message = ""
@@ -165,11 +186,10 @@ class AutoMod(commands.Cog):
 
         embed = discord.Embed(
             title="Blacklisted words:",
-            description=message,
-            color=self.bot.main_color
+            description=message
         )
 
-        await ctx.send(embed=embed)
+        await ctx.respond(embed=embed)
 
 
 def setup(bot):
