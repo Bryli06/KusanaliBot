@@ -54,6 +54,10 @@ class AutoMod(commands.Cog):
 
         self.cache = db
 
+    @commands.command("test")
+    async def test(self, ctx):
+        ctx.send("Works!")
+
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         message.channel.send(f"{self.guild_ids}")
