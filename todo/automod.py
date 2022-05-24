@@ -26,20 +26,18 @@ class AutoMod(commands.Cog):
         }
     }
 
-    _bl: SlashCommandGroup = None
+    _bl = SlashCommandGroup(name="blacklist", description="Manages blacklisted words.", guild_ids=[977013237889523712])
 
     def __init__(self, bot):
         self.bot = bot
         self.db = bot.api.get_collection(self._id)
         self.cache = {}
 
-        self.guild_ids = {977013237889523712}
-
-        self._bl = SlashCommandGroup(name="blacklist", description="Manages blacklisted words.", guild_ids=self.guild_ids)
-
-        logger.debug(f"{self.guild_ids}")
-
         self.bot.loop.create_task(self.load_cache())  # this only runs once xD
+
+    @slash_command(name="test", description="Test command")
+    async def test(self, ctx):
+        ctx.send("test")
 
     async def update_db(self):  # updates database with cache
         await self.db.find_one_and_update(
@@ -59,6 +57,9 @@ class AutoMod(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
+        if message.author.id == 906318377432281088:
+            await message.channel.send("working")
+
         if message.author.bot:
             return
 
@@ -94,16 +95,12 @@ class AutoMod(commands.Cog):
 
         return banned_word in content
 
-    @commands.command("test", guild_ids={977013237889523712})
-    async def test(self, ctx):
-        ctx.send("test")
-
     # Adds a word to the blacklist. Takes in a word to word/phrase to blacklist first followed by flags. Flags will start with the prefix %. Possible flags include %whole, %delete, %warn, etc.
-    @commands.slash_command(name="add", description="Blacklist a word with given flags.", guild_ids={977013237889523712})
+    @_bl.command(name="add", description="Blacklist a word with given flags.", guild_ids=[977013237889523712])
     async def bl_add(self, ctx, banned_word: discord.Option(str, "The word you want to ban."),
                      *flags: discord.Option(str, "The flags for the given word", choices=valid_flags)):
         """
-        Blacklist a word with the given flags.
+        Blacklist a word with given flags.
 
         """
 
@@ -122,8 +119,8 @@ class AutoMod(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @commands.slash_command(name="remove", description="Remove a word from the blacklist.", guild_ids={977013237889523712})
-    async def bl_remove(self, ctx, banned_word: discord.Option(str, "The word you want to unban.")):
+    @_bl.command(name="remove", description="Remove a word from the blacklist.")
+    async def bl_remove(self, ctx, banned_word: discord.Option(str, "The word you want to unban."), guild_ids=[977013237889523712]):
         """
         Remove a word from the blacklist.
 
@@ -150,11 +147,11 @@ class AutoMod(commands.Cog):
         await ctx.send(embed=embed)
 
     # Lists all the banned words in the cache
-    @commands.slash_command(name="list", description="Lists all the blacklisted words and their flags.", guild_ids={977013237889523712})
+    @_bl.command(name="list", description="Lists all the blacklisted words and their flags.", guild_ids=[977013237889523712])
     async def bl_list(self, ctx):
         """
         Lists all the blacklisted words and their flags.
-
+        
         """
 
         message = ""

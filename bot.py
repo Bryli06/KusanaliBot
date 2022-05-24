@@ -23,6 +23,7 @@ class KusanaliBot(commands.Bot):
         self.settings.load_cache()
 
         self.bot = self
+        self.debug_guilds = None # censored
 
         self.session = None
         self.api = Database(self)
@@ -32,17 +33,9 @@ class KusanaliBot(commands.Bot):
         self.start_time = datetime.utcnow()
         self.on_start()
 
-    bot: commands.Bot = None
-    @bot.command("test", guild_ids={977013237889523712})
-    async def test(self, ctx):
-        ctx.send("test")
-
-
     def on_start(self):
         for cog in [file.replace('.py', '') for file in listdir("cogs") if isfile(join('cogs', file))]:
             logger.info(f"Loading cog: {cog}")
-
-            logger.info('cogs' + '.' + cog)
 
             try:
                 self.load_extension('cogs' + '.' + cog)
