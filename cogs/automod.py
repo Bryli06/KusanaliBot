@@ -26,7 +26,7 @@ class AutoMod(commands.Cog):
         }
     }
 
-    _bl: SlashCommandGroup
+    _bl: SlashCommandGroup = None
 
     def __init__(self, bot):
         self.bot = bot
