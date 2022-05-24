@@ -16,8 +16,6 @@ logger = get_logger(__name__)
 class AutoMod(commands.Cog):
     _id = "automod"
 
-    testbot: commands.Bot = None
-
     # can also be warn ban kick mute but not implemented yet
     valid_flags = {OptionChoice("Delete", "delete"), OptionChoice(
         "Whole", "whole"), OptionChoice("Case", "case")}
@@ -57,10 +55,6 @@ class AutoMod(commands.Cog):
             db = self.default_cache
 
         self.cache = db
-
-    @testbot.slash_command(guild_ids=[977013237889523712])
-    async def test(self, ctx):
-        await ctx.send("Works!")
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
