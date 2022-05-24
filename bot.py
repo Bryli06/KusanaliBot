@@ -56,7 +56,6 @@ class KusanaliBot(commands.Bot):
     async def on_ready(self):
         await self.wait_until_ready()
         await self.connected.wait()
-        await self.settings.ready
         # add a bunch of logger stuff telling bot info
 
 
