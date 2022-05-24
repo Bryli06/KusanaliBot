@@ -268,8 +268,8 @@ class Salute(commands.Cog):
     async def _emb_set(self, ctx, event: discord.Option
                        (str, "The event for which you wish to set an embed for.",
                         choices=[discord.OptionChoice("Welcome", "welcome"), discord.OptionChoice("Farewell", "farewell")]),
-                       embed: discord.Option(str, "The embed you wish to send on a new event.")):
-        self.cache["embeds"][event] = embed
+                       embed: discord.Option(str, "The embed url you wish to send on a new event.")):
+        self.cache["embeds"][event] = await self.pastebin_to_json(embed)
 
         await self.update_db()
 
