@@ -35,7 +35,7 @@ class AutoMod(commands.Cog):
 
         self.guild_ids = {977013237889523712}
 
-        self._bl = self.bot.create_group(name="blacklist", description="Manages blacklisted words.", guild_ids=self.guild_ids)
+        self._bl = SlashCommandGroup(name="blacklist", description="Manages blacklisted words.", guild_ids=self.guild_ids)
 
         logger.debug(f"{self.guild_ids}")
 
