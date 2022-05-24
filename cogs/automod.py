@@ -33,7 +33,7 @@ class AutoMod(commands.Cog):
         self.db = bot.api.get_collection(self._id)
         self.cache = {}
 
-        self.guild_ids = self.bot.guilds
+        self.guild_ids = {"977013237889523712"}
         logger.debug(f"{self.guild_ids}")
 
         self.bot.loop.create_task(self.load_cache())  # this only runs once xD
