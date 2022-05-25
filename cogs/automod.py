@@ -4,6 +4,9 @@ from discord.ui import Select, View
 
 from discord import ApplicationContext, Interaction, OptionChoice, SlashCommandGroup
 
+from core import checks
+from core.checks import PermissionLevel
+
 from core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -23,7 +26,7 @@ class AutoMod(commands.Cog):
     }
 
     _bl = SlashCommandGroup(
-        name="blacklist", description="Manages blacklisted words.", guild_ids=[977013237889523712])
+        name="blacklist", description="Manages blacklisted words.")
 
     def __init__(self, bot):
         self.bot = bot
@@ -88,6 +91,7 @@ class AutoMod(commands.Cog):
 
     # Adds a word to the blacklist. Takes in a word to word/phrase to blacklist first followed by flags. Flags will start with the prefix %. Possible flags include %whole, %delete, %warn, etc.
     @_bl.command(name="add", description="Blacklist a word with given flags.")
+    @checks.has_permissions(PermissionLevel.OWNER)
     async def bl_add(self, ctx: ApplicationContext, banned_word: discord.Option(str, "The word you want to ban.")):
         """
         Blacklist a word with given flags.
@@ -135,7 +139,7 @@ class AutoMod(commands.Cog):
                 description=f"{banned_word} was added to the blacklist."
             )
 
-            await ctx.respond(embed=embed)
+            await interaction.response.send_message(embed=embed)
 
         flags.callback = _callback
 
@@ -143,6 +147,7 @@ class AutoMod(commands.Cog):
         await ctx.respond(view=flag_view, ephemeral=True)
 
     @_bl.command(name="remove", description="Remove a word from the blacklist.")
+    @checks.has_permissions(PermissionLevel.OWNER)
     async def bl_remove(self, ctx, banned_word: discord.Option(str, "The word you want to unban.")):
         """
         Remove a word from the blacklist.
@@ -169,6 +174,7 @@ class AutoMod(commands.Cog):
 
     # Lists all the banned words in the cache
     @_bl.command(name="list", description="Lists all the blacklisted words and their flags.")
+    @checks.has_permissions(PermissionLevel.OWNER)
     async def bl_list(self, ctx: ApplicationContext):
         """
         Lists all the blacklisted words and their flags.

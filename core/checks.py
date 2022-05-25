@@ -1,10 +1,11 @@
+from typing import Callable, TypeVar
 import discord
 from discord.ext import commands
 
 from enum import Enum
 from core.logger import get_logger
 
-
+T = TypeVar("T")
 logger = get_logger(__name__)
 
 
@@ -17,40 +18,44 @@ class PermissionLevel(Enum):
     OWNER = 2
 
 
-def has_permissions_predicate(permission_level: PermissionLevel = PermissionLevel.REGULAR,):
-    async def predicate(ctx):
-        return await check_permissions(ctx, permission_level)
-
-    predicate.permission_level = permission_level
-
-    return predicate
-
-
-def has_permissions(permission_level: PermissionLevel = PermissionLevel.REGULAR):
+def has_permissions(permission_level: PermissionLevel = PermissionLevel.REGULAR) -> Callable[[T], T]:
     """
     A decorator that checks if the author has the required permissions.
 
     """
 
-    return commands.check(has_permissions_predicate(permission_level))
+    async def predicate(ctx) -> bool:
+        return await check_permissions(ctx, permission_level)
+
+    return commands.check(predicate)
 
 
-async def check_permissions(ctx, permission_level) -> bool:
+async def check_permissions(ctx: discord.ApplicationContext, permission_level) -> bool:
     """
     Checks if a user has the permissions required.
 
     """
 
-    if await ctx.bot.is_owner(ctx.author) or ctx.author.id == ctx.bot.user.id or ctx.author.id == ctx.guild.owner_id or ctx.author.id in ctx.bot.settings.cache["owners"]:
+    # Check for server/bot ownership
+    if await ctx.bot.is_owner(ctx.author) or ctx.author.id == ctx.bot.user.id or ctx.author.id == ctx.guild.owner_id or str(ctx.author.id) in ctx.bot.settings.cache["owners"]:
         return True
 
+    # Check for administrator
     if permission_level is not PermissionLevel.OWNER and ctx.channel.permissions_for(ctx.author).administrator:
         return True
 
+    # Check if it's a regular user
     if permission_level is PermissionLevel.REGULAR:
         return True
+
+    commands.is_owner()
 
     if permission_level is None:
         logger.error(f"Invalid permission level: {permission_level.__str__}")
 
-    return False
+    embed = discord.Embed(
+        title="Error", description="You do not have the required permissions.")
+
+    await ctx.respond(embed=embed, ephemeral=True)
+
+    raise commands.CheckFailure("You do not have the required permissions.")

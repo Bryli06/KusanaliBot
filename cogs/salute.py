@@ -122,6 +122,7 @@ class Salute(commands.Cog):
             await channel.send(embed=await self.json_to_embed(frw_embed))
 
     @_slt.command(name="test", description="Tests the join/leave events.")
+    @checks.has_permissions(PermissionLevel.OWNER)
     async def slt_test(self, ctx: discord.ApplicationContext):
         """
         Sends test welcome/farewell messages in the designated channels.
@@ -167,6 +168,7 @@ class Salute(commands.Cog):
         await ctx.respond(embed=embed)
 
     @_chn.command(name="set")
+    @checks.has_permissions(PermissionLevel.OWNER)
     async def chn_set(self, ctx,
                       channel: discord.Option
                       (str, "The channel you want to set.",
@@ -189,6 +191,7 @@ class Salute(commands.Cog):
         await ctx.respond(embed=embed)
 
     @_chn.command(name="clear", description="Clears the channel of the specified event.")
+    @checks.has_permissions(PermissionLevel.OWNER)
     async def chn_clear(self, ctx, channel: discord.Option
                         (str, "The channel you want to set.",
                          choices=[discord.OptionChoice("Welcome Channel", "welcome"),
@@ -216,6 +219,7 @@ class Salute(commands.Cog):
         await ctx.respond(embed=embed)
 
     @_chn.command(name="list", description="Lists the channels set.")
+    @checks.has_permissions(PermissionLevel.OWNER)
     async def chn_list(self, ctx):
         """
         Lists the channels you set for join/leave events.
@@ -233,6 +237,7 @@ class Salute(commands.Cog):
         await ctx.respond(embed=embed)
 
     @_msg.command(name="set", description="Sets the message for the event.")
+    @checks.has_permissions(PermissionLevel.OWNER)
     async def _msg_set(self, ctx, event: discord.Option
                        (str, "The event for which you wish to set a message for.",
                         choices=[discord.OptionChoice("Welcome", "welcome"), discord.OptionChoice("Farewell", "farewell")]),
@@ -249,6 +254,7 @@ class Salute(commands.Cog):
         await ctx.respond(embed=embed)
 
     @_msg.command(name="clear", description="Clears the message for the event.")
+    @checks.has_permissions(PermissionLevel.OWNER)
     async def _msg_clear(self, ctx, event: discord.Option
                          (str, "The event for which you wish to set a message for.",
                           choices=[discord.OptionChoice("Welcome", "welcome"), discord.OptionChoice("Farewell", "farewell")])):
@@ -265,6 +271,7 @@ class Salute(commands.Cog):
         await ctx.respond(embed=embed)
 
     @_emb.command(name="set", description="Sets the embed for the event.")
+    @checks.has_permissions(PermissionLevel.OWNER)
     async def _emb_set(self, ctx, event: discord.Option
                        (str, "The event for which you wish to set an embed for.",
                         choices=[discord.OptionChoice("Welcome", "welcome"), discord.OptionChoice("Farewell", "farewell")]),
@@ -281,6 +288,7 @@ class Salute(commands.Cog):
         await ctx.respond(embed=embed)
 
     @_emb.command(name="clear", description="Clears the embed for the event.")
+    @checks.has_permissions(PermissionLevel.OWNER)
     async def _emb_clear(self, ctx, event: discord.Option
                          (str, "The event for which you wish to set an embed for.",
                           choices=[discord.OptionChoice("Welcome", "welcome"), discord.OptionChoice("Farewell", "farewell")])):

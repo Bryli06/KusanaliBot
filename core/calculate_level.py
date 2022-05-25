@@ -1,13 +1,15 @@
 from math import floor
 
 
+level_exp = 12
+
 def get_level(exp):
-    return floor(exp / 1000)  # update this eventually
+    return floor(exp / level_exp)  # update this eventually
 
 
 def next_level(exp):
-    return floor(exp / 1000) * 1000 + 1000
+    return floor(exp / level_exp) * level_exp + level_exp
 
 
 def level_to_exp(level):
-    return level * 1000
+    return level * level_exp

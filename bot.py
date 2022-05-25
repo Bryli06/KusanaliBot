@@ -1,4 +1,3 @@
-import imp
 import discord
 from discord.ext import commands
 
@@ -21,7 +20,8 @@ logger = get_logger(__name__)
 
 class KusanaliBot(commands.Bot):
     def __init__(self):
-        super().__init__(intents=discord.Intents.all(), debug_guilds=[977013237889523712])
+        super().__init__(intents=discord.Intents.all(),
+                         debug_guilds=[849762277041504286])
         self.settings = Settings(self)
         self.settings.load_cache()
 
@@ -91,10 +91,7 @@ class KusanaliBot(commands.Bot):
             loop.stop()
 
         def _cancel_tasks():
-            if sys.version_info < (3, 8):
-                task_retriever = asyncio.Task.all_tasks
-            else:
-                task_retriever = asyncio.all_tasks
+            task_retriever = asyncio.all_tasks
 
             tasks = {t for t in task_retriever(loop=loop) if not t.done()}
 
@@ -105,7 +102,8 @@ class KusanaliBot(commands.Bot):
             for task in tasks:
                 task.cancel()
 
-            loop.run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
+            loop.run_until_complete(asyncio.gather(
+                *tasks, return_exceptions=True))
             logger.info("All tasks finished cancelling.")
 
             for task in tasks:
