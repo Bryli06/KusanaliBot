@@ -1,4 +1,3 @@
-from curses import nonl
 import math
 import discord
 from discord.ext import commands
@@ -238,10 +237,6 @@ class Leveling(commands.Cog):
         close = Button(label="Close", style=discord.ButtonStyle.red)
         close.callback = _callback_close
 
-        if ctx.author.is_on_mobile():
-            left.label = ":arrow_left:"
-            right.label = ":arrow_right:"
-
         async def show_top(page):
             users_page = 2
 
@@ -281,7 +276,7 @@ class Leveling(commands.Cog):
                 rank += 1
 
             embed = discord.Embed(
-                title=f"{ctx.guild.name}'s leaderboard",
+                title=f"{ctx.guild.name if ctx.guild is not None else 'Unknown'}'s leaderboard",
                 description=description
             )
 

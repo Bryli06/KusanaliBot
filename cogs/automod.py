@@ -15,10 +15,6 @@ logger = get_logger(__name__)
 class AutoMod(commands.Cog):
     _id = "automod"
 
-    # can also be warn ban kick mute but not implemented yet
-    valid_flags = {OptionChoice("Delete", "delete"), OptionChoice(
-        "Whole", "whole"), OptionChoice("Case", "case")}
-
     default_cache = {  # can also store more stuff like warn logs or notes for members if want to implement in future
         "bannedWords": {  # dictionary of word and an array of it's flags
 

@@ -18,6 +18,26 @@ class PermissionLevel(Enum):
     OWNER = 2
 
 
+def only_modmail_thread(modmail_channel_id) -> Callable[[T], T]:
+    """
+    A decorator that checks if the channel is a modmail thread.
+
+    """
+
+    async def predicate(ctx: discord.ApplicationContext) -> bool:
+        if type(ctx.channel) == discord.threads.Thread and ctx.channel.parent_id == modmail_channel_id:
+            return True
+
+        embed = discord.Embed(
+            title="Error", description="You can't use this command here.")
+
+        await ctx.respond(embed=embed, ephemeral=True)
+
+        raise commands.CheckFailure("You can't use this command here.")
+
+    return commands.check(predicate)
+
+
 def has_permissions(permission_level: PermissionLevel = PermissionLevel.REGULAR) -> Callable[[T], T]:
     """
     A decorator that checks if the author has the required permissions.

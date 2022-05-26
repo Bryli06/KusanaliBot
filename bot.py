@@ -20,8 +20,7 @@ logger = get_logger(__name__)
 
 class KusanaliBot(commands.Bot):
     def __init__(self):
-        super().__init__(intents=discord.Intents.all(),
-                         debug_guilds=[849762277041504286])
+        super().__init__(intents=discord.Intents.all())
         self.settings = Settings(self)
         self.settings.load_cache()
 

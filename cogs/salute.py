@@ -23,8 +23,8 @@ class Salute(commands.Cog):
             "farewell": ""
         },
         "embeds": {
-            "welcome": "",
-            "farewell": ""
+            "welcome": {},
+            "farewell": {}
         }
     }
 
@@ -89,6 +89,9 @@ class Salute(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
+        if self.cache["channels"]["welcome"] == "":
+            return
+
         channel: discord.TextChannel = self.bot.get_channel(int(self.cache["channels"]["welcome"]))
 
         if channel == None:
@@ -106,6 +109,9 @@ class Salute(commands.Cog):
 
     @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member):
+        if self.cache["channels"]["farewell"] == "":
+            return
+
         channel: discord.TextChannel = self.bot.get_channel(int(self.cache["channels"]["farewell"]))
 
         if channel == None:
@@ -129,8 +135,14 @@ class Salute(commands.Cog):
 
         """
 
-        wlc_channel: discord.TextChannel = self.bot.get_channel(int(self.cache["channels"]["welcome"]))
-        frw_channel: discord.TextChannel = self.bot.get_channel(int(self.cache["channels"]["farewell"]))
+        wlc_channel: discord.TextChannel = ctx.channel
+        frw_channel: discord.TextChannel = ctx.channel
+
+        if self.cache["channels"]["welcome"] != "":
+            wlc_channel = self.bot.get_channel(int(self.cache["channels"]["welcome"]))
+
+        if self.cache["channels"]["welcome"] != "":
+            frw_channel = self.bot.get_channel(int(self.cache["channels"]["farewell"]))
 
         if self.cache["messages"]["welcome"] is not None and self.cache["messages"]["welcome"] != "":
             await wlc_channel.send(await self.translate_message(ctx.author, self.cache["messages"]["welcome"], wlc_channel))
