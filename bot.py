@@ -10,7 +10,6 @@ import asyncio
 from aiohttp import ClientSession
 from datetime import datetime
 from core.logger import get_logger
-import uvloop
 
 from core.database import Database
 from core.settings import Settings

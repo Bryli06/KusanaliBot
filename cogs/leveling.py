@@ -130,7 +130,7 @@ class Leveling(commands.Cog):
 
         embed = discord.Embed(
             title=user.display_name,
-            description=f"**Level:** {calculate_level.get_level(exp)} \n **Exp:** {exp}/{calculate_level.next_level(exp)} \n **Rank:** {rank}"
+            description=f"**Level:** {calculate_level.inverse(exp)} \n **Exp:** {exp}/{calculate_level.next_level(exp)} \n **Rank:** {rank}"
         )
 
         embed.set_thumbnail(url=user.display_avatar.url)
@@ -169,13 +169,13 @@ class Leveling(commands.Cog):
             return
 
         self.cache["userExpData"]["inside"][str(
-            user.id)] = amount if mode == "exp" else calculate_level.level_to_exp(amount)
+            user.id)] = amount if mode == "exp" else calculate_level.equation(amount)
 
         await self.update_db()
 
         embed = discord.Embed(
             title="Success!",
-            description=f"{user.mention}'s exp was set to {amount}, new level is {calculate_level.get_level(amount)}."
+            description=f"{user.mention}'s exp was set to {amount}, new level is {calculate_level.inverse(amount)}."
         )
 
         await ctx.respond(embed=embed)
@@ -194,7 +194,7 @@ class Leveling(commands.Cog):
 
         await ctx.defer()
 
-        async def _callback_left(interaction: discord.Interaction):
+        async def _left_callback(interaction: discord.Interaction):
             if (interaction.user.id != ctx.author.id):
                 await interaction.response.defer()
                 return
@@ -206,7 +206,7 @@ class Leveling(commands.Cog):
 
             await interaction.response.defer()
 
-        async def _callback_right(interaction):
+        async def _right_callback(interaction):
             if (interaction.user.id != ctx.author.id):
                 await interaction.response.defer()
                 return
@@ -218,7 +218,7 @@ class Leveling(commands.Cog):
 
             await interaction.response.defer()
 
-        async def _callback_close(interaction):
+        async def _close_callback(interaction):
             if (interaction.user.id != ctx.author.id):
                 await interaction.response.defer()
                 return
@@ -229,13 +229,13 @@ class Leveling(commands.Cog):
             return
 
         left = Button(label="◀", style=discord.ButtonStyle.blurple)
-        left.callback = _callback_left
+        left.callback = _left_callback
 
         right = Button(label="▶", style=discord.ButtonStyle.blurple)
-        right.callback = _callback_right
+        right.callback = _right_callback
 
         close = Button(label="Close", style=discord.ButtonStyle.red)
-        close.callback = _callback_close
+        close.callback = _close_callback
 
         async def show_top(page):
             users_page = 2
@@ -272,7 +272,7 @@ class Leveling(commands.Cog):
 
             rank = start + 1
             for key, value in sort:
-                description += f"**#{rank}.** <@{key}>\n\t Level: `{calculate_level.get_level(int(value))}` \n\t Exp `{value}/{calculate_level.next_level(int(value))}`\n"
+                description += f"**#{rank}.** <@{key}>\n\t Level: `{calculate_level.inverse(int(value))}` \n\t Exp `{value}/{calculate_level.next_level(int(value))}`\n"
                 rank += 1
 
             embed = discord.Embed(
@@ -402,7 +402,7 @@ class Leveling(commands.Cog):
 
         exp = self.cache["userExpData"]["inside"][str(user.id)]
         next_level = calculate_level.next_level(exp)
-        level = calculate_level.get_level(exp) + 1
+        level = calculate_level.inverse(exp) + 1
 
         if exp + self.exp_given >= next_level:
             if str(level) in self.cache["levelEvents"]:

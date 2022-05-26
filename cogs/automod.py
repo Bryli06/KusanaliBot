@@ -126,7 +126,7 @@ class AutoMod(commands.Cog):
             await ctx.respond(embed=embed)
             return
 
-        async def _callback(interaction: Interaction):
+        async def _flag_callback(interaction: Interaction):
             self.cache["bannedWords"].update({banned_word: flags.values})
             await self.update_db()
 
@@ -137,7 +137,7 @@ class AutoMod(commands.Cog):
 
             await interaction.response.send_message(embed=embed)
 
-        flags.callback = _callback
+        flags.callback = _flag_callback
 
         flag_view = View(flags)
         await ctx.respond(view=flag_view, ephemeral=True)

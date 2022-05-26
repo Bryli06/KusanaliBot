@@ -1,15 +1,19 @@
-from math import floor
+from math import floor, sqrt
 
 
-level_exp = 12
+a = 20
+b = 300
+c = 500
 
-def get_level(exp):
-    return floor(exp / level_exp)  # update this eventually
+
+def equation(level):
+    return floor(a * pow(level, 2) + b * level + c)
+
+
+def inverse(exp):
+    level = floor((-b + sqrt(pow(b, 2) - 4 * a * (c - exp))) / (2 * a))
+    return level if level > 0 else 0
 
 
 def next_level(exp):
-    return floor(exp / level_exp) * level_exp + level_exp
-
-
-def level_to_exp(level):
-    return level * level_exp
+    return equation(inverse(exp))
