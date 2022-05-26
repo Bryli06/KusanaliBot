@@ -10,7 +10,9 @@ from core.checks import PermissionLevel
 from core.logger import get_logger
 
 from datetime import date, datetime, timedelta
-from core.datetime_event import Waituntil
+import time
+
+from threading import Timer
 
 logger = get_logger(__name__)
 
@@ -24,7 +26,7 @@ class Giveaway(commands.Cog):
         }
     }
 
-    _ga = SlashCommandGroup("giveaway", "Contains all giveaway commands.") 
+    _ga = SlashCommandGroup("giveaway", "Contains all giveaway commands.")
 
     def __init__(self, bot):
         self.bot = bot
@@ -49,16 +51,18 @@ class Giveaway(commands.Cog):
         embed = discord.Embed(title="Giveaway", description="Giveaway ended")
         self.bot.loop.create_task(message.edit_original_message(embed=embed))
 
-
     @_ga.command(name="create", description="Creates a new giveaway")
     @checks.has_permissions(PermissionLevel.OWNER)
-    async def _ga_create(self, ctx: ApplicationContext, time: discord.Option(int, "Time in seconds.", min_value=5)):
-        embed = discord.Embed(title="Giveaway", description="Giveaway started")
+    async def _ga_create(self, ctx: ApplicationContext, seconds: discord.Option(int, "Time in seconds.", min_value=5)):
+        unix_now = int(time.mktime(datetime.now().timetuple()))
+        offset = int(timedelta(0, seconds).total_seconds())
+
+        embed = discord.Embed(
+            title="Giveaway", description=f"Giveaway started and will end at <t:{unix_now + offset}:F>")
         message = await ctx.respond(embed=embed)
 
-        th = Waituntil(function=self.giveaway_end, date_or_time=datetime.now() + timedelta(0, time), args={message})
+        th = Timer(offset, self.giveaway_end, {message})
         th.start()
-        
 
 
 def setup(bot):
