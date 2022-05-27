@@ -34,6 +34,8 @@ virtualenv = "==20.14.1"
 virtualenv-clone = "==0.5.7"
 yarg = "==0.1.9"
 yarl = "==1.7.2"
+python-dateutil = "*"
+parsedatetime = "*"
 
 [dev-packages]
 

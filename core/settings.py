@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-
+guild_id = os.getenv("GUILD_ID")
 class Settings:
 
     bot_config = {
