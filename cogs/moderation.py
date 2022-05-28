@@ -8,10 +8,9 @@ from core.time import UserFriendlyTime
 from core import checks
 from core.checks import PermissionLevel
 from core.logger import get_logger
-from core import settings
+from core import config
 
 logger = get_logger(__name__)
-guild_id = settings.guild_id
 
 
 class Moderation(commands.Cog):
@@ -102,7 +101,7 @@ class Moderation(commands.Cog):
         return self.bot.loop.create_task(self._unban(member))
 
     async def _unban(self, member):
-        await self.bot.get_guild(guild_id).unban(member)
+        await self.bot.get_guild(self.bot.config["guild_id"]).unban(member)
 
 
 def setup(bot):

@@ -57,7 +57,7 @@ async def check_permissions(ctx: discord.ApplicationContext, permission_level) -
     """
 
     # Check for server/bot ownership
-    if await ctx.bot.is_owner(ctx.author) or ctx.author.id == ctx.bot.user.id or ctx.author.id == ctx.guild.owner_id or str(ctx.author.id) in ctx.bot.settings.cache["owners"]:
+    if await ctx.bot.is_owner(ctx.author) or ctx.author.id == ctx.bot.user.id or ctx.author.id == ctx.guild.owner_id or str(ctx.author.id) in ctx.bot.config.cache["owners"]:
         return True
 
     # Check for administrator

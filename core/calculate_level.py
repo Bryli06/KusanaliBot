@@ -3,7 +3,7 @@ from math import floor, sqrt
 
 a = 20
 b = 300
-c = 500
+c = 200
 
 
 def equation(level):
@@ -11,7 +11,7 @@ def equation(level):
 
 
 def inverse(exp):
-    level = floor((-b + sqrt(pow(b, 2) - 4 * a * (c - exp))) / (2 * a))
+    level = floor((-b + sqrt(pow(b, 2) - 4 * a * (c - exp))) / (2 * a)) + 1
     return level if level > 0 else 0
 
 

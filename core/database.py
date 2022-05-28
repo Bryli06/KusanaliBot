@@ -14,7 +14,7 @@ class Database:
         try:
             # gets kusanalibot database in db
             self.db = motor.AsyncIOMotorClient(
-                bot.settings["pymongo_uri"]).kusanalibot
+                bot.config["pymongo_uri"]).kusanalibot
 
         except ConfigurationError as e:
             logger.error(f"MongoDB connection error: {e}")
@@ -34,7 +34,7 @@ class Database:
             logger.error(error)
 
             if "CERTIFICATE_VERIFY_FAILED" in error and ssl_retry:
-                uri = self.bot.settings["pymongo_uri"]
+                uri = self.bot.config["pymongo_uri"]
                 logger.critical("Invalid SSL certificate")
                 self.db = motor.AsyncIOMotorClient(
                     uri, tlsAllowInvalidCertificates=True).kusanalibot

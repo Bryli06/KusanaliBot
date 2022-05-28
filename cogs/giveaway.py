@@ -1,3 +1,4 @@
+import random
 import discord
 from discord.ext import commands
 from discord.ui import Select, Button, View
@@ -21,8 +22,6 @@ logger = get_logger(__name__)
 
 class Giveaway(commands.Cog):
     _id = "giveaway"
-
-    _guild_id = 849762277041504286
 
     default_cache = {
         "giveaways": {
@@ -61,7 +60,7 @@ class Giveaway(commands.Cog):
             await self.start_thread(int(message_id))
 
     async def start_thread(self, message_id):
-        guild: discord.Guild = self.bot.get_guild(self._guild_id)
+        guild: discord.Guild = self.bot.get_guild(self.bot.config["guild_id"])
         channel: TextChannel = guild.get_channel(
             self.cache["giveaways"][str(message_id)]["channel"])
         message = await channel.fetch_message(message_id)
@@ -85,10 +84,24 @@ class Giveaway(commands.Cog):
 
                 return
 
+            can_enter = False
+            for role in interaction.user.roles:
+                if role.id in cache["allowedRoles"]:
+                    can_enter = True
+                    break
+
+            if not can_enter:
+                embed = discord.Embed(
+                    title="Failed", description="You do not possess any of the roles needed to join.")
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+
+                return
+
             cache["participants"].append(interaction.user.id)
             await self.update_db()
 
-            embed = discord.Embed(title="Success", description="You've entered the giveaway!")
+            embed = discord.Embed(
+                title="Success", description="You've entered the giveaway!")
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
         enter = Button(label="Enter", style=discord.ButtonStyle.blurple)
@@ -102,7 +115,46 @@ class Giveaway(commands.Cog):
         if message == None or str(message.id) not in self.cache["giveaways"]:
             return
 
-        embed = discord.Embed(title="Giveaway", description="Giveaway ended")
+        cache = self.cache["giveaways"][str(message.id)]
+
+        reward = cache["reward"]
+        winners = cache["winners"]
+        allowed_roles = cache["allowedRoles"]
+        participants = cache["participants"]
+
+        if len(participants) == 0:
+            embed = discord.Embed(
+                title="Giveaway has ended!", description="The giveaway has ended with no winners.")
+
+            self.bot.loop.create_task(message.edit(embed=embed, view=None))
+
+            self.cache["giveaways"].pop(str(message.id))
+            self.bot.loop.create_task(self.update_db())
+
+            return
+
+        winners_id = []
+
+        if winners > len(participants):
+            winners_id = participants
+        else:
+            winner_id = random.choice(participants)
+
+            winners_id.append(winner_id)
+            participants.remove(winner_id)
+
+        description = "Congratulations to:\n"
+        for winner_id in winners_id:
+            description += f"<@{winner_id}> "
+
+        description += f"for winning a `{reward}`!"
+
+        embed = message.embeds[0]
+
+        embed.title = f"The {reward} giveaway has ended!"
+        embed.description = description
+        embed.clear_fields()
+
         self.bot.loop.create_task(message.edit(embed=embed, view=None))
 
         self.cache["giveaways"].pop(str(message.id))
@@ -113,7 +165,8 @@ class Giveaway(commands.Cog):
     async def message_giveaway_end(self, ctx, message):
         self.giveaway_end(message)
 
-        embed = discord.Embed(title="Success", description="Giveaway was ended")
+        embed = discord.Embed(
+            title="Success", description="Giveaway was ended")
         await ctx.respond(embed=embed, ephemeral=True)
 
     @_ga.command(name="create", description="Creates a new giveaway")
@@ -121,11 +174,12 @@ class Giveaway(commands.Cog):
     async def _ga_create(self, ctx: ApplicationContext, reward: discord.Option(str, "The name of the reward."),
                          winners: discord.Option(int, "The number of winners.", min_value=1),
                          seconds: discord.Option(int, "For how long you wish the giveaway to stay up.", min_value=1)):
+        guild: discord.Guild = self.bot.get_guild(self.bot.config["guild_id"])
+
         allowed_roles = Select(
             placeholder="Select allowed roles",
-            max_values=25,
-            options=[discord.SelectOption(label=role.name, value=str(role.id)) for role in sorted(
-                ctx.guild.roles, key=lambda r: -len(r.members))][1:26]
+            max_values=len(self.bot.config["levelRoles"]) if len(self.bot.config["levelRoles"]) <= 25 else 25,
+            options=[discord.SelectOption(label=guild.get_role(role).name, value=str(role)) for role in self.bot.config["levelRoles"]][:25]
         )
 
         async def _roles_callback(interaction: Interaction):

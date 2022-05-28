@@ -12,7 +12,7 @@ from datetime import datetime
 from core.logger import get_logger
 
 from core.database import Database
-from core.settings import Settings
+from core.config import Config
 
 logger = get_logger(__name__)
 
@@ -20,13 +20,15 @@ logger = get_logger(__name__)
 class KusanaliBot(commands.Bot):
     def __init__(self):
         super().__init__(intents=discord.Intents.all())
-        self.settings = Settings(self)
-        self.settings.load_cache()
+        self.config = Config(self)
+        self.config.load_cache_env()
 
         self.session = None
         self.api = Database(self)
         self.db = self.api.db
         self.connected = asyncio.Event()
+
+        self.loop.create_task(self.config.load_cache_db(self.db))
 
         self.start_time = datetime.utcnow()
         self.on_start()
@@ -54,7 +56,7 @@ class KusanaliBot(commands.Bot):
             try:
                 retry_intents = False
                 try:
-                    await self.start(self.settings["bot_token"])
+                    await self.start(self.config["bot_token"])
                 except discord.PrivilegedIntentsRequired:
                     retry_intents = True
                 if retry_intents:

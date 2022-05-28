@@ -16,7 +16,6 @@ logger = get_logger(__name__)
 class Modmail(commands.Cog):
     _id = "modmail"
 
-    _guild_id = 849762277041504286
     _modmail_channel_id = 975496903619911770
     _modmail_role_id = 975558400991707136
 
@@ -60,7 +59,7 @@ class Modmail(commands.Cog):
         if message.author.bot or message.guild != None or str(message.author.id) not in self.cache["userThreads"]:
             return
 
-        guild: discord.Guild = self.bot.get_guild(self._guild_id)
+        guild: discord.Guild = self.bot.get_guild(self.bot.config["guild_id"])
         thread = guild.get_thread(
             self.cache["userThreads"][str(message.author.id)])
 
@@ -167,7 +166,7 @@ class Modmail(commands.Cog):
 
             return
 
-        guild: discord.Guild = self.bot.get_guild(self._guild_id)
+        guild: discord.Guild = self.bot.get_guild(self.bot.config["guild_id"])
         modmail_channel = guild.get_channel(self._modmail_channel_id)
 
         member = guild.get_member(ctx.author.id)
@@ -209,7 +208,7 @@ class Modmail(commands.Cog):
 
         self.ending = True
 
-        guild = self.bot.get_guild(self._guild_id)
+        guild = self.bot.get_guild(self.bot.config["guild_id"])
         thread = guild.get_thread(
             self.cache["userThreads"][str(ctx.author.id)])
 

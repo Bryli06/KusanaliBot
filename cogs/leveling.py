@@ -175,7 +175,7 @@ class Leveling(commands.Cog):
 
         embed = discord.Embed(
             title="Success!",
-            description=f"{user.mention}'s exp was set to {amount}, new level is {calculate_level.inverse(amount)}."
+            description=f"{user.mention}'s exp was set to {amount if mode == 'exp' else calculate_level.equation(amount)}, new level is {calculate_level.inverse(amount)}."
         )
 
         await ctx.respond(embed=embed)
