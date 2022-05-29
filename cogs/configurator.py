@@ -66,7 +66,7 @@ class Configurator(commands.Cog):
 
         cache = self.bot.config.cache
         for name in cache:
-            if name == "bot_token" or name == "_id":
+            if name == "bot_token" or name == "pymongo_uri" or name == "_id":
                 continue
 
             embed.add_field(name=name, value=cache[name], inline=False)
