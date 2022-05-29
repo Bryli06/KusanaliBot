@@ -7,6 +7,7 @@ from datetime import datetime
 import copy
 from math import floor
 import re
+from core.base_cog import BaseCog
 
 from core.time import UserFriendlyTime
 from core import checks
@@ -17,7 +18,7 @@ from core import config
 logger = get_logger(__name__)
 
 
-class Moderation(commands.Cog):
+class Moderation(BaseCog):
     _id = "moderation"
 
     default_cache = {
@@ -56,26 +57,11 @@ class Moderation(commands.Cog):
         }
     }
 
-    def __init__(self, bot):
-        self.bot = bot
-        self.db = self.bot.db[self._id]
-        self.cache = {}
-
-        self.bot.loop.create_task(self.load_cache())
-
-    async def update_db(self):  # updates database with cache
-        await self.db.find_one_and_update(
-            {"_id": self._id},
-            {"$set": self.cache},
-            upsert=True,
-        )
+    def __init__(self, bot) -> None:
+        super().__init__(bot)
 
     async def load_cache(self):
-        db = await self.db.find_one({"_id": self._id})
-        if db is None:
-            db = self.default_cache
-
-        self.cache = db
+        await super().load_cache()
 
         for key, value in list(self.cache["unban_queue"].items()):
             await self._unban(key, value)

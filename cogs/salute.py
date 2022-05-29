@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 
 from core import checks
+from core.base_cog import BaseCog
 from core.checks import PermissionLevel
 
 import re
@@ -10,7 +11,7 @@ import requests
 import copy
 
 
-class Salute(commands.Cog):
+class Salute(BaseCog):
     _id = "salute"
 
     default_cache = {
@@ -37,26 +38,8 @@ class Salute(commands.Cog):
     _emb = _slt.create_subgroup(
         "embed", "Manages thee embeds for the join/leave events.")
 
-    def __init__(self, bot):
-        self.bot = bot
-        self.db = self.bot.db[self._id]
-        self.cache = {}
-
-        self.bot.loop.create_task(self.load_cache())
-
-    async def update_db(self):  # updates database with cache
-        await self.db.find_one_and_update(
-            {"_id": self._id},
-            {"$set": self.cache},
-            upsert=True,
-        )
-
-    async def load_cache(self):
-        db = await self.db.find_one({"_id": self._id})
-        if db == None:
-            db = self.default_cache
-
-        self.cache = db
+    def __init__(self, bot) -> None:
+        super().__init__(bot)
 
     async def translate_message(self, memeber: discord.Member, message, channel: discord.TextChannel):
         blocks = {

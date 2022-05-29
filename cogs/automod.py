@@ -1,3 +1,4 @@
+from lib2to3.pytree import Base
 import discord
 from discord.ext import commands
 from discord.ui import Select, View
@@ -5,6 +6,7 @@ from discord.ui import Select, View
 from discord import ApplicationContext, Interaction, OptionChoice, SlashCommandGroup
 
 from core import checks
+from core.base_cog import BaseCog
 from core.checks import PermissionLevel
 
 from core.logger import get_logger
@@ -12,7 +14,7 @@ from core.logger import get_logger
 logger = get_logger(__name__)
 
 
-class AutoMod(commands.Cog):
+class AutoMod(BaseCog):
     _id = "automod"
 
     default_cache = {  # can also store more stuff like warn logs or notes for members if want to implement in future
@@ -24,26 +26,8 @@ class AutoMod(commands.Cog):
     _bl = SlashCommandGroup(
         name="blacklist", description="Manages blacklisted words.")
 
-    def __init__(self, bot):
-        self.bot = bot
-        self.db = self.bot.db[self._id]
-        self.cache = {}
-
-        self.bot.loop.create_task(self.load_cache())
-
-    async def update_db(self):  # updates database with cache
-        await self.db.find_one_and_update(
-            {"_id": self._id},
-            {"$set": self.cache},
-            upsert=True,
-        )
-
-    async def load_cache(self):
-        db = await self.db.find_one({"_id": self._id})
-        if db is None:
-            db = self.default_cache
-
-        self.cache = db
+    def __init__(self, bot) -> None:
+        super().__init__(bot)
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):

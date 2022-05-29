@@ -3,6 +3,7 @@ import discord
 from discord.ext import commands
 
 from discord.ui import View, Button, Select
+from core.base_cog import BaseCog
 
 from core.checks import PermissionLevel
 from core import calculate_level, checks, drawer
@@ -11,7 +12,7 @@ from core.logger import get_logger
 logger = get_logger(__name__)
 
 
-class Leveling(commands.Cog):
+class Leveling(BaseCog):
     _id = "leveling"
 
     exp_given = 1
@@ -33,26 +34,8 @@ class Leveling(commands.Cog):
     _lvl = discord.SlashCommandGroup(
         "level", "Contains command to modify the leveling system.")
 
-    def __init__(self, bot: commands.Bot):
-        self.bot = bot
-        self.db = self.bot.db[self._id]
-        self.cache = {}
-
-        self.bot.loop.create_task(self.load_cache())  # this only runs once xD
-
-    async def update_db(self):  # updates database with cache
-        await self.db.find_one_and_update(
-            {"_id": self._id},
-            {"$set": self.cache},
-            upsert=True,
-        )
-
-    async def load_cache(self):
-        db = await self.db.find_one({"_id": self._id})
-        if db is None:
-            db = self.default_cache
-
-        self.cache = db
+    def __init__(self, bot) -> None:
+        super().__init__(bot)
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):

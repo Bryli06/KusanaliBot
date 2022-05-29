@@ -6,6 +6,7 @@ from discord.ui import Select, View
 from discord import ApplicationContext, CategoryChannel, Embed, Interaction, OptionChoice, SlashCommandGroup, guild_only
 
 from core import checks
+from core.base_cog import BaseCog
 from core.checks import PermissionLevel
 
 from core.logger import get_logger
@@ -13,7 +14,7 @@ from core.logger import get_logger
 logger = get_logger(__name__)
 
 
-class Modmail(commands.Cog):
+class Modmail(BaseCog):
     _id = "modmail"
 
     _modmail_channel_id = 975496903619911770
@@ -30,29 +31,8 @@ class Modmail(commands.Cog):
     _mm = SlashCommandGroup(
         "modmail", "Contains all modmail commands for mods.")
 
-    def __init__(self, bot):
-        self.bot = bot
-        self.db = self.bot.db[self._id]
-        self.cache = {}
-
-        self.bot.loop.create_task(self.load_cache())
-
-        test: discord.Bot = self.bot
-        test.event
-
-    async def update_db(self):  # updates database with cache
-        await self.db.find_one_and_update(
-            {"_id": self._id},
-            {"$set": self.cache},
-            upsert=True,
-        )
-
-    async def load_cache(self):
-        db = await self.db.find_one({"_id": self._id})
-        if db is None:
-            db = self.default_cache
-
-        self.cache = db
+    def __init__(self, bot) -> None:
+        super().__init__(bot)
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
