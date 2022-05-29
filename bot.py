@@ -33,6 +33,12 @@ class KusanaliBot(commands.Bot):
         self.start_time = datetime.utcnow()
         self.on_start()
 
+    async def on_application_command_error(self, ctx: discord.ApplicationContext, exception: discord.DiscordException):
+        embed = discord.Embed(title="Error",
+                              description=f"It seems an error has occured.\nError:`{exception}`\nIf you believe this to be a bug please report it to the technical mod team.")
+
+        await ctx.respond(embed=embed)
+
     def on_start(self):
         for cog in [file.replace('.py', '') for file in listdir("cogs") if isfile(join('cogs', file))]:
             logger.info(f"Loading cog: {cog}")
