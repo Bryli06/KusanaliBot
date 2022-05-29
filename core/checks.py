@@ -14,9 +14,12 @@ class PermissionLevel(Enum):
         return self.name
 
     REGULAR = 0
-    ADMINISTRATOR = 1
-    OWNER = 2
-
+    TC_MOD = 1
+    TRIAL_MOD = 2
+    MOD = 3
+    ADMINISTRATOR = 4
+    OWNER = 5
+    
 
 def only_modmail_thread(modmail_channel_id) -> Callable[[T], T]:
     """
@@ -57,25 +60,30 @@ async def check_permissions(ctx: discord.ApplicationContext, permission_level) -
     """
 
     # Check for server/bot ownership
-    if await ctx.bot.is_owner(ctx.author) or ctx.author.id == ctx.bot.user.id or ctx.author.id == ctx.guild.owner_id or str(ctx.author.id) in ctx.bot.config.cache["owners"]:
+    if await ctx.bot.is_owner(ctx.author) or ctx.author.id == ctx.bot.user.id or ctx.author.id == ctx.guild.owner_id or str(ctx.author.id) in ctx.bot.config["owners"]:
         return True
 
     # Check for administrator
     if permission_level is not PermissionLevel.OWNER and ctx.channel.permissions_for(ctx.author).administrator:
         return True
 
+    # Check for mod
+    if permission_level is not PermissionLevel.ADMINISTRATOR and ctx.author.get_role(ctx.bot.config["mod"]) != None:
+        return True
+
+    # Check for trial mod
+    if permission_level is not PermissionLevel.MOD and ctx.author.get_role(ctx.bot.config["trialMod"]) != None:
+        return True
+
+    # Check for theorycraft mod
+    if permission_level is not PermissionLevel.TRIAL_MOD and ctx.author.get_role(ctx.bot.config["tcMod"]) != None:
+        return True
+
     # Check if it's a regular user
     if permission_level is PermissionLevel.REGULAR:
         return True
 
-    commands.is_owner()
-
     if permission_level is None:
         logger.error(f"Invalid permission level: {permission_level.__str__}")
-
-    embed = discord.Embed(
-        title="Error", description="You do not have the required permissions.")
-
-    await ctx.respond(embed=embed, ephemeral=True)
 
     raise commands.CheckFailure("You do not have the required permissions.")
