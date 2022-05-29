@@ -2,10 +2,10 @@ import math
 import discord
 from discord.ext import commands
 
-from discord.ui import View, Button
+from discord.ui import View, Button, Select
 
 from core.checks import PermissionLevel
-from core import calculate_level, checks
+from core import calculate_level, checks, drawer
 from core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -95,7 +95,7 @@ class Leveling(commands.Cog):
 
     @commands.slash_command(name="rank", description="Gets the rank of a user.")
     @commands.check(checks.has_permissions(PermissionLevel.REGULAR))
-    async def rank(self, ctx, user: discord.Option(discord.User, "The user whose rank you want to see, leave it blank to see yours.", required=False)):
+    async def rank(self, ctx: discord.ApplicationContext, user: discord.Option(discord.User, "The user whose rank you want to see, leave it blank to see yours.", required=False)):
         """
         Gets the rank of a user.
 
@@ -128,14 +128,11 @@ class Leveling(commands.Cog):
 
                 break
 
-        embed = discord.Embed(
-            title=user.display_name,
-            description=f"**Level:** {calculate_level.inverse(exp)} \n **Exp:** {exp}/{calculate_level.next_level(exp)} \n **Rank:** {rank}"
-        )
+        await drawer.create_rank_card(user.display_avatar.url, exp, f"{user.display_name}#{user.discriminator}", rank)
 
-        embed.set_thumbnail(url=user.display_avatar.url)
+        file = discord.File("./assets/rank.png")
 
-        await ctx.respond(embed=embed)
+        await ctx.response.send_message(file=file)
 
     @commands.user_command(name="Get user rank")
     @checks.has_permissions(PermissionLevel.REGULAR)
@@ -146,39 +143,6 @@ class Leveling(commands.Cog):
     @checks.has_permissions(PermissionLevel.REGULAR)
     async def message_rank(self, ctx, message):
         await self.rank(ctx, message.author)
-
-    @_lvl.command(name="set", description="Sets the exp of the user to a specified value.")
-    @checks.has_permissions(PermissionLevel.OWNER)
-    async def _lvl_set(self, ctx,
-                       user: discord.Option(discord.User, "The user whose level you wish to change."),
-                       mode: discord.Option(str, "How you wish to set the exp", 
-                       choices=[discord.OptionChoice("Experience", "exp"), discord.OptionChoice("Level", "level")]),
-                       amount: discord.Option(int, "The amount you wish to change the user's exp to", min_value=0)):
-        """
-        Sets the exp of a user.
-
-        """
-
-        if str(user.id) not in self.cache["userExpData"]["inside"]:
-            embed = discord.Embed(
-                title="User not found",
-                description=f"User {user.mention} was not present in the database."
-            )
-
-            await ctx.respond(embed=embed)
-            return
-
-        self.cache["userExpData"]["inside"][str(
-            user.id)] = amount if mode == "exp" else calculate_level.equation(amount)
-
-        await self.update_db()
-
-        embed = discord.Embed(
-            title="Success!",
-            description=f"{user.mention}'s exp was set to {amount if mode == 'exp' else calculate_level.equation(amount)}, new level is {calculate_level.inverse(amount)}."
-        )
-
-        await ctx.respond(embed=embed)
 
     @commands.slash_command(name="leaderboard", description="Gets a list of users ordered by level.")
     @commands.check(checks.has_permissions(PermissionLevel.REGULAR))
@@ -292,71 +256,158 @@ class Leveling(commands.Cog):
         await show_top(page)
         await ctx.delete(delay=60)
 
+    @_lvl.command(name="set", description="Sets the exp of the user to a specified value.")
+    @checks.has_permissions(PermissionLevel.OWNER)
+    async def _lvl_set(self, ctx,
+                       user: discord.Option(discord.User, "The user whose level you wish to change."),
+                       mode: discord.Option(str, "How you wish to set the exp",
+                                            choices=[discord.OptionChoice("Experience", "exp"), discord.OptionChoice("Level", "level")]),
+                       amount: discord.Option(int, "The amount you wish to change the user's exp to", min_value=0)):
+        """
+        Sets the exp of a user.
+
+        """
+
+        if str(user.id) not in self.cache["userExpData"]["inside"]:
+            embed = discord.Embed(
+                title="User not found",
+                description=f"User {user.mention} was not present in the database."
+            )
+
+            await ctx.respond(embed=embed)
+            return
+
+        self.cache["userExpData"]["inside"][str(
+            user.id)] = amount if mode == "exp" else calculate_level.equation(amount)
+
+        await self.update_db()
+
+        embed = discord.Embed(
+            title="Success!",
+            description=f"{user.mention}'s exp was set to {amount if mode == 'exp' else calculate_level.equation(amount)}, new level is {calculate_level.inverse(amount)}."
+        )
+
+        await ctx.respond(embed=embed)
+
     @_lvl.command(name="add", description="Adds a new event associated with a level.")
     @checks.has_permissions(PermissionLevel.OWNER)
-    async def _lvl_add(self, ctx, level: discord.Option(int, "The level you wish to add an event to", min_value=1),
+    async def _lvl_add(self, ctx, level: discord.Option(int, "The level in which the level role is.", min_value=1),
                        action: discord.Option(str, "The action you wish to take on hitting that level.",
-                                              choices=[discord.OptionChoice("Add role", "add"), discord.OptionChoice("Remove role", "remove")]),
-                       role: discord.Option(discord.Role, "The role you wish to take action with."),):
+                       choices=[discord.OptionChoice("Add role", "add"), discord.OptionChoice("Remove role", "remove")])):
         if str(level) not in self.cache["levelEvents"]:
             self.cache["levelEvents"].update({str(level): []})
 
-        for level_event in self.cache["levelEvents"][str(level)]:
-            if level_event["role"] == role.id and level_event["action"] == action:
-                embed = discord.Embed(
-                    title="Duplicate level event",
-                    description=f"Level {level} event '{action} {role.mention}' is already in the database!"
-                )
+        guild: discord.Guild = self.bot.get_guild(self.bot.config["guild_id"])
 
-                await ctx.respond(embed=embed)
-                return
+        if len(self.bot.config["levelRoles"]) == 0:
+            embed = discord.Embed(
+                title="Error", description="No level roles found.")
+            await ctx.respond(embed=embed)
 
-        self.cache["levelEvents"][str(level)].append(
-            {"role": role.id, "action": action})
+            return
 
-        embed = discord.Embed(
-            title="Success",
-            description=f"New level {level} event added: {action} {role.mention}!"
+        level_roles = Select(
+            placeholder="Select level roles",
+            max_values=len(self.bot.config["levelRoles"]) if len(
+                self.bot.config["levelRoles"]) <= 25 else 25,
+            options=[discord.SelectOption(label=guild.get_role(role).name, value=str(
+                role)) for role in self.bot.config["levelRoles"]][:25]
         )
 
-        await self.update_db()
-        await ctx.respond(embed=embed)
+        async def _roles_callback(interaction: discord.Interaction):
+            description = ""
+            for role_id in level_roles.values:
+                duplicate = False
+                for level_event in self.cache["levelEvents"][str(level)]:
+                    if level_event["role"] == int(role_id) and level_event["action"] == action:
+                        description += f"Level {level} event {action} <@&{role_id}> is already in the database.\n"
+                        duplicate = True
+
+                        break
+
+                if duplicate:
+                    continue
+
+                description += f"Added level {level} event {action} <@&{role_id}>.\n"
+
+                self.cache["levelEvents"][str(level)].append(
+                    {"role": int(role_id), "action": action})
+
+            embed = discord.Embed(
+                title="Report",
+                description=description
+            )
+
+            await self.update_db()
+            await interaction.response.send_message(embed=embed)
+
+        level_roles.callback = _roles_callback
+
+        roles_view = View(level_roles)
+        await ctx.respond(view=roles_view, ephemeral=True)
 
     @_lvl.command(name="remove", description="Removes an event associated with a level.")
     @checks.has_permissions(PermissionLevel.OWNER)
-    async def _lvl_remove(self, ctx, level: discord.Option(int, "The level you wish to change the user's to", min_value=1),
+    async def _lvl_remove(self, ctx, level: discord.Option(int, "The level in which the level role is.", min_value=1),
                           action: discord.Option(str, "The action you wish to take on hitting that level.",
-                          choices=[discord.OptionChoice("Add role", "add"), discord.OptionChoice("Remove role", "remove")]),
-                          role: discord.Option(discord.Role, "The role you wish to take action with.")):
+                          choices=[discord.OptionChoice("Add role", "add"), discord.OptionChoice("Remove role", "remove")])):
         if str(level) not in self.cache["levelEvents"]:
             embed = discord.Embed(
-                title="Level not found",
+                title="Error",
                 description=f"The level was not found in the database."
             )
 
             await ctx.respond(embed=embed)
             return
 
-        for level_event in self.cache["levelEvents"][str(level)]:
-            if level_event["role"] == role.id and level_event["action"] == action:
-                self.cache["levelEvents"][str(level)].remove(level_event)
+        guild: discord.Guild = self.bot.get_guild(self.bot.config["guild_id"])
 
-                embed = discord.Embed(
-                    title="Success",
-                    description=f"Level {level} event '{action} {role.mention}' was removed!"
-                )
+        if len(self.bot.config["levelRoles"]) == 0:
+            embed = discord.Embed(
+                title="Error", description="No level roles found.")
+            await ctx.respond(embed=embed)
 
-                await self.update_db()
-                await ctx.respond(embed=embed)
+            return
 
-                return
+        level_roles = Select(
+            placeholder="Select level roles",
+            max_values=len(self.bot.config["levelRoles"]) if len(
+                self.bot.config["levelRoles"]) <= 25 else 25,
+            options=[discord.SelectOption(label=guild.get_role(role).name, value=str(
+                role)) for role in self.bot.config["levelRoles"]][:25]
+        )
+
+        async def _roles_callback(interaction: discord.Interaction):
+            description = ""
+            for role_id in level_roles.values:
+                found = False
+                for level_event in self.cache["levelEvents"][str(level)]:
+                    if level_event["role"] == int(role_id) and level_event["action"] == action:
+                        description += f"Removed level {level} event {action} <@&{role_id}>.\n"
+                        self.cache["levelEvents"][str(level)].remove(
+                            {"role": int(role_id), "action": action})
+
+                        found = True
+
+                        break
+
+                if found:
+                    continue
+
+                description += f"Level {level} event {action} <@&{role_id}> was not found in the database.\n"
 
             embed = discord.Embed(
-                title="Level event not found",
-                description=f"The level event was not found in the database."
+                title="Report",
+                description=description
             )
 
-            await ctx.respond(embed=embed)
+            await self.update_db()
+            await interaction.response.send_message(embed=embed)
+
+        level_roles.callback = _roles_callback
+
+        roles_view = View(level_roles)
+        await ctx.respond(view=roles_view, ephemeral=True)
 
     @_lvl.command(name="list", description="Lists all the level events.")
     @checks.has_permissions(PermissionLevel.ADMINISTRATOR)
@@ -411,7 +462,7 @@ class Leveling(commands.Cog):
                     if role == None:
                         logger.error("Role for level event was not found.")
                         continue
-                    
+
                     if level_event["action"] == "add":
                         await user.add_roles(role)
                     elif level_event["action"] == "remove":
