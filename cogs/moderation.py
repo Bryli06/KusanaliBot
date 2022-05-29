@@ -408,7 +408,7 @@ class Moderation(commands.Cog):
 
     @delete.command(name="note", description="Deletes a note")
     @checks.has_permissions(PermissionLevel.OWNER)
-    async def remove_warn(self, ctx: ApplicationContext, noteid: discord.Option(int, description="note ID to remove.")):
+    async def remove_note(self, ctx: ApplicationContext, noteid: discord.Option(int, description="note ID to remove.")):
         user = None
         idx = None
         for key, value in self.cache["note"].items():
