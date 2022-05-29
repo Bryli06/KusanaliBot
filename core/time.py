@@ -82,7 +82,7 @@ class FutureTime(Time):
             raise BadArgument("The time is in the past.")
 
 
-class UserFriendlyTimeSync(Converter):
+class UserFriendlyTimeSync():
     """That way quotes aren't absolutely necessary."""
 
     def __init__(self):
@@ -98,7 +98,7 @@ class UserFriendlyTimeSync(Converter):
         self.arg = remaining
         return self
 
-    def convert(self, ctx, argument):
+    def convert(self, argument):
         self.raw = argument
         remaining = ""
         try:
@@ -181,8 +181,8 @@ class UserFriendlyTimeSync(Converter):
 
 
 class UserFriendlyTime(UserFriendlyTimeSync):
-    async def convert(self, ctx, argument):
-        return super().convert(ctx, argument)
+    async def convert(self, argument):
+        return super().convert(argument)
 
 
 def human_timedelta(dt, *, source=None):
