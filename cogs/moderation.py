@@ -112,6 +112,8 @@ class Moderation(BaseCog):
             description += f"Succesfully banned: {successful_ids}."
         if failed_ids:
             description += f"Could not ban: {failed_ids}"
+        if not description:
+            description = f"No users parsed, please mention the user or use their id."
         embed = discord.Embed(
             title="Success", description=description)
         await ctx.respond(embed=embed)
@@ -143,6 +145,8 @@ class Moderation(BaseCog):
             description += f"Successfully unbanned: {successful_ids}"
         if failed_ids:
             description += f"Users not banned: {failed_ids}"
+        if not description:
+            description = f"No users parsed, please mention the user or use their id."
         embed = discord.Embed(
             title="Success", description=description)
         await ctx.respond(embed=embed)
@@ -181,7 +185,8 @@ class Moderation(BaseCog):
             await ctx.respond(embed=embed)
             return
         actionlist = copy.deepcopy(self.cache["ban"][userid])
-        actionlist.extend(self.cache["unban"][userid])
+        if userid in self.cache["unban"]:
+            actionlist.extend(self.cache["unban"][userid])
         actionlist = sorted(actionlist, key=lambda d: d['time'])
         description = ""
         for action in actionlist:
@@ -234,6 +239,8 @@ class Moderation(BaseCog):
             description += f"Succesfully kicked: {successful_ids}."
         if failed_ids:
             description += f"Could not kick: {failed_ids}"
+        if not description:
+            description = f"No users parsed, please mention the user or use their id."
         embed = discord.Embed(
             title="Success", description=description)
         await ctx.respond(embed=embed)
@@ -277,16 +284,16 @@ class Moderation(BaseCog):
         successful_ids = ""
         failed_ids = ""
         for members in member:
-            _member = await self.bot.fetch_user(members)
             try:
+                _member = await self.bot.fetch_user(members)
                 await _member.send(f"You have been warned in {ctx.guild.name}. Reason: {reason}")
                 successful_ids += f"\n {members}"
+                self.cache["warn"].setdefault(str(members), []).append(
+                {"responsible": ctx.author.id, "reason": reason, "time": datetime.now().timestamp(), "id": self.cache["warnid"]})
+                self.cache["warnid"] += 1
             except:
                 failed_ids += f"\n {members}"
 
-            self.cache["warn"].setdefault(str(members), []).append(
-                {"responsible": ctx.author.id, "reason": reason, "time": datetime.now().timestamp(), "id": self.cache["warnid"]})
-            self.cache["warnid"] += 1
 
         await self.update_db()
         description = ""
@@ -294,6 +301,8 @@ class Moderation(BaseCog):
             description += f"Succesfully warned: {successful_ids}."
         if failed_ids:
             description += f"Could not message: {failed_ids}"
+        if not description:
+            description = f"No users parsed, please mention the user or use their id."
         embed = discord.Embed(
             title="Success", description=description)
         await ctx.respond(embed=embed)
@@ -348,7 +357,8 @@ class Moderation(BaseCog):
             await ctx.respond(embed=embed)
             return
         actionlist = copy.deepcopy(self.cache["warn"][userid])
-        actionlist.extend(self.cache["pardon"][userid])
+        if userid in self.cache["pardon"]:
+            actionlist.extend(self.cache["pardon"][userid])
         actionlist = sorted(actionlist, key=lambda d: d['time'])
         description = ""
         for action in actionlist:
@@ -386,8 +396,14 @@ class Moderation(BaseCog):
             self.cache["noteid"] += 1
 
         await self.update_db()
+        description=""
+        if ids:
+            description = f"Successfully wrote a note for: {ids}"
+        else:
+            description = f"No users parsed, please mention the user or use their id."
+
         embed = discord.Embed(
-            title="Success", description=f"Successfully wrote a note for: {ids}")
+            title="Success", description=description)
         await ctx.respond(embed=embed)
 
     delete = SlashCommandGroup("delete", "Manages notes")
