@@ -1,8 +1,11 @@
 import discord
 from discord.ext import commands
 
+from core.logger import get_logger
+
 
 class BaseCog(commands.Cog):
+    logger = get_logger(__name__)
 
     def __init__(self, bot):
         self.bot = bot

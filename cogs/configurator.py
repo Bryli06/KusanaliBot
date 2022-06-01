@@ -12,13 +12,7 @@ from core import checks
 from core.base_cog import BaseCog
 from core.checks import PermissionLevel
 
-from core.logger import get_logger
-
 import re
-
-from json import dumps
-
-logger = get_logger(__name__)
 
 
 class Configurator(BaseCog):

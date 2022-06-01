@@ -12,10 +12,7 @@ from core.base_cog import BaseCog
 from core.time import UserFriendlyTime
 from core import checks
 from core.checks import PermissionLevel
-from core.logger import get_logger
 from core import config
-
-logger = get_logger(__name__)
 
 
 class Moderation(BaseCog):
@@ -92,7 +89,7 @@ class Moderation(BaseCog):
             try:
                 await _member.send(f"You have been banned from {ctx.guild.name}. Reason: {reason}")
             except:
-                logger.error(f"Can not message {members}.")
+                self.logger.error(f"Can not message {members}.")
             try:
                 await ctx.guild.ban(_member, reason=reason)
             except Exception as e:
@@ -170,7 +167,7 @@ class Moderation(BaseCog):
             self.cache["unban"].setdefault(str(member), []).append(
                 {"responsible": self.bot.application_id, "reason": f"Automated Unban", "time": datetime.now().timestamp()})
         except Exception as e:
-            logger.error(f"{e}")
+            self.logger.error(f"{e}")
         self.cache["unban_queue"].pop(member)
         await self.update_db()
 
@@ -205,6 +202,7 @@ class Moderation(BaseCog):
 
 #----------------------------------------Kicks----------------------------------------#
 
+
     @commands.slash_command(name="kick", description="Kicks a member")
     @checks.has_permissions(PermissionLevel.OWNER)
     async def kick(self, ctx: ApplicationContext, memberlist: discord.Option(str, description="The members you want to kick."),
@@ -222,7 +220,7 @@ class Moderation(BaseCog):
             try:
                 await _member.send(f"You have been kicked from {ctx.guild.name}. Reason: {reason}")
             except:
-                logger.error(f"Can not message {members}.")
+                self.logger.error(f"Can not message {members}.")
             try:
                 await ctx.guild.kick(_member, reason=reason)
             except Exception as e:
@@ -271,6 +269,7 @@ class Moderation(BaseCog):
 
 #----------------------------------------Warn----------------------------------------#
 
+
     @commands.slash_command(name="warn", description="Warns a member")
     @checks.has_permissions(PermissionLevel.OWNER)
     async def warn(self, ctx: ApplicationContext, memberlist: discord.Option(str, description="The members you want to warn."),
@@ -289,11 +288,10 @@ class Moderation(BaseCog):
                 await _member.send(f"You have been warned in {ctx.guild.name}. Reason: {reason}")
                 successful_ids += f"\n {members}"
                 self.cache["warn"].setdefault(str(members), []).append(
-                {"responsible": ctx.author.id, "reason": reason, "time": datetime.now().timestamp(), "id": self.cache["warnid"]})
+                    {"responsible": ctx.author.id, "reason": reason, "time": datetime.now().timestamp(), "id": self.cache["warnid"]})
                 self.cache["warnid"] += 1
             except:
                 failed_ids += f"\n {members}"
-
 
         await self.update_db()
         description = ""
@@ -378,6 +376,7 @@ class Moderation(BaseCog):
 
 #----------------------------------------Note----------------------------------------#
 
+
     @commands.slash_command(name="note", description="Write a note about a member")
     @checks.has_permissions(PermissionLevel.OWNER)
     async def note(self, ctx: ApplicationContext, memberlist: discord.Option(str, description="The members you want to write a note about."),
@@ -396,7 +395,7 @@ class Moderation(BaseCog):
             self.cache["noteid"] += 1
 
         await self.update_db()
-        description=""
+        description = ""
         if ids:
             description = f"Successfully wrote a note for: {ids}"
         else:

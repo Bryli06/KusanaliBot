@@ -9,15 +9,11 @@ from core import checks
 from core.base_cog import BaseCog
 from core.checks import PermissionLevel
 
-from core.logger import get_logger
-
-logger = get_logger(__name__)
-
 
 class Modmail(BaseCog):
     _id = "modmail"
 
-    _modmail_channel_id = 975496903619911770
+    _modmail_channel_id = 981271368140206170
     _modmail_role_id = 975558400991707136
 
     default_cache = {
@@ -43,7 +39,7 @@ class Modmail(BaseCog):
         thread = guild.get_thread(
             self.cache["userThreads"][str(message.author.id)])
 
-        embed = discord.Embed(description=message.content, timestamp=datetime.today())
+        embed = discord.Embed(description=message.content, timestamp=datetime.now())
         embed.set_author(
             name=f"{message.author.name}#{message.author.discriminator}", icon_url=message.author.avatar)
 
@@ -124,7 +120,7 @@ class Modmail(BaseCog):
     @_mm.command(name="reply", description="Replies to a user in a modmail thread.")
     @checks.only_modmail_thread(_modmail_channel_id)
     async def _mm_reply(self, ctx: ApplicationContext, message: discord.Option(str, "The message you wish to reply with.")):
-        embed = discord.Embed(description=message, timestamp=datetime.today())
+        embed = discord.Embed(description=message, timestamp=datetime.now())
         embed.set_author(
             name=f"{ctx.author.name}#{ctx.author.discriminator}", icon_url=ctx.author.avatar)
 
@@ -154,7 +150,7 @@ class Modmail(BaseCog):
         thread: discord.Thread = await modmail_channel.create_thread(name=title)
 
         embed = discord.Embed(
-            description=f"{ctx.author.mention}\nReason for mail: {reason}", timestamp=datetime.today())
+            description=f"{ctx.author.mention}\nReason for mail: {reason}", timestamp=datetime.now())
 
         embed.set_author(
             name=f"{member.name}#{member.discriminator}", icon_url=member.display_avatar)

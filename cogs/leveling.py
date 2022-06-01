@@ -7,9 +7,6 @@ from core.base_cog import BaseCog
 
 from core.checks import PermissionLevel
 from core import calculate_level, checks, drawer
-from core.logger import get_logger
-
-logger = get_logger(__name__)
 
 
 class Leveling(BaseCog):
@@ -443,7 +440,8 @@ class Leveling(BaseCog):
                 for level_event in self.cache["levelEvents"][str(level)]:
                     role = user.guild.get_role(level_event["role"])
                     if role == None:
-                        logger.error("Role for level event was not found.")
+                        self.logger.error(
+                            "Role for level event was not found.")
                         continue
 
                     if level_event["action"] == "add":

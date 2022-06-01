@@ -1,4 +1,3 @@
-from lib2to3.pytree import Base
 import discord
 from discord.ext import commands
 from discord.ui import Select, View
@@ -9,22 +8,17 @@ from core import checks
 from core.base_cog import BaseCog
 from core.checks import PermissionLevel
 
-from core.logger import get_logger
-
-logger = get_logger(__name__)
-
 
 class AutoMod(BaseCog):
     _id = "automod"
 
-    default_cache = {  # can also store more stuff like warn logs or notes for members if want to implement in future
-        "bannedWords": {  # dictionary of word and an array of it's flags
+    default_cache = {
+        "bannedWords": {
 
         }
     }
 
-    _bl = SlashCommandGroup(
-        name="blacklist", description="Manages blacklisted words.")
+    _bl = SlashCommandGroup("blacklist", "Manages blacklisted words.")
 
     def __init__(self, bot) -> None:
         super().__init__(bot)
