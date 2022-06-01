@@ -177,7 +177,7 @@ class UserFriendlyTimeSync():
             return self.check_constraints(self.now, remaining)
         except Exception:
             logger.exception("Something went wrong while parsing the time.")
-            raise
+            raise 
 
 
 class UserFriendlyTime(UserFriendlyTimeSync):
