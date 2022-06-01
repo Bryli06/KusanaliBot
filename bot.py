@@ -33,6 +33,15 @@ class KusanaliBot(commands.Bot):
         self.start_time = datetime.utcnow()
         self.on_start()
 
+    # TODO implement error handling
+    """
+    async def on_error(self, event, *args, **kwargs):
+        embed = discord.Embed(title="Error",
+                              description=f"It seems `{event}({args})({kwargs})` has raised an error.\nError:`{sys.exc_info()[1].with_traceback}`\n.")
+
+        # add error logs channel
+    """
+
     async def on_application_command_error(self, ctx: discord.ApplicationContext, exception: discord.DiscordException):
         embed = discord.Embed(title="Error",
                               description=f"It seems an error has occured.\nError:`{exception}`\nIf you believe this to be a bug please report it to the technical mod team.")
