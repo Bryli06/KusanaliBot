@@ -10,6 +10,8 @@ from core import checks
 from core.base_cog import BaseCog
 from core.checks import PermissionLevel
 
+import traceback as tb
+
 
 class Logging(BaseCog):
     _id = "logging"
@@ -20,7 +22,8 @@ class Logging(BaseCog):
         "msgChannel": None,
         "srvChannel": None,
         "jlvChannel": None,
-        "mbrChannel": None
+        "mbrChannel": None,
+        "errChannel": None
     }
 
     _lg = SlashCommandGroup("log", "Contains all the commands for logging.")
@@ -36,6 +39,9 @@ class Logging(BaseCog):
 
     @commands.Cog.listener()
     async def on_message_delete(self, message: discord.Message):
+        if message.author.bot:
+            return
+
         guild = self.bot.get_guild(self.bot.config["guild_id"])
 
         embed = discord.Embed(title=f"Message deleted in #{message.channel.name}",
@@ -66,6 +72,9 @@ class Logging(BaseCog):
 
     @ commands.Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message):
+        if before.author.bot:
+            return
+
         guild = self.bot.get_guild(self.bot.config["guild_id"])
 
         embed = discord.Embed(title=f"Message edited in #{before.channel.name}",
@@ -298,6 +307,9 @@ class Logging(BaseCog):
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
+        if member.bot:
+            return
+
         guild = self.bot.get_guild(self.bot.config["guild_id"])
 
         def ordinal(n): return "%d%s" % (
@@ -325,11 +337,14 @@ class Logging(BaseCog):
 
     @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member):
+        if member.bot:
+            return
+
         guild = self.bot.get_guild(self.bot.config["guild_id"])
 
         embed = discord.Embed(title=f"Member left",
                               description=f"{member.mention} joined <t:{int(time.mktime(member.joined_at.timetuple()))}:R>.",
-                              timestamp=datetime.now(), colour=Colour.green())
+                              timestamp=datetime.now(), colour=Colour.red())
 
         embed.set_author(
             name=f"{member.name}#{member.discriminator}", icon_url=member.avatar)
@@ -351,6 +366,9 @@ class Logging(BaseCog):
 
     @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member):
+        if before.bot:
+            return
+
         guild = self.bot.get_guild(self.bot.config["guild_id"])
 
         embed = discord.Embed(
@@ -403,6 +421,9 @@ class Logging(BaseCog):
 
     @commands.Cog.listener()
     async def on_user_update(self, before: discord.Member, after: discord.Member):
+        if before.bot:
+            return
+
         guild = self.bot.get_guild(self.bot.config["guild_id"])
 
         embed = discord.Embed(
@@ -425,7 +446,7 @@ class Logging(BaseCog):
             embed.add_field(name="Before", value="".join(before_value))
             embed.add_field(name="After", value="".join(after_value))
 
-        embed.set_thumbnail(url=after.avatar.url)
+        embed.set_thumbnail(url=after.avatar)
 
         embed.set_footer(text=before.id)
 
@@ -440,14 +461,71 @@ class Logging(BaseCog):
 
         chn = guild.get_channel(self.cache["mbrChannel"])
 
-        if len(embed.fields) > 0:
+        await chn.send(embed=embed)
+
+#------------------------------------------error logs----------------------------------------#
+
+    @commands.Cog.listener()
+    async def on_error(self, exception: Exception, hint: str = "", suggestion: str = ""):
+        guild = self.bot.get_guild(self.bot.config["guild_id"])
+
+        embed = discord.Embed(title="Error")
+
+        embed.add_field(name="Exception", value=f"`{exception}`", inline=False)
+        embed.add_field(
+            name="Traceback", value=f"`{''.join(tb.format_exception(type(exception), exception, exception.__traceback__))}`", inline=False)
+
+        if hint != "":
+            embed.add_field(name="Hint", value=hint, inline=False)
+
+        if suggestion != "":
+            embed.add_field(name="Suggestion", value=suggestion, inline=False)
+
+        if self.cache["errChannel"] == None:
+            if self.cache["logChannel"] == None:
+                return
+
+            chn = guild.get_channel(self.cache["logChannel"])
             await chn.send(embed=embed)
+
+            return
+
+        chn = guild.get_channel(self.cache["errChannel"])
+
+        await chn.send(embed=embed)
+
+    @commands.Cog.listener()
+    async def on_application_command_error(self, ctx: discord.ApplicationContext, exception: discord.DiscordException):
+        guild = self.bot.get_guild(self.bot.config["guild_id"])
+
+        embed = discord.Embed(
+            title="Error",
+            description=f"It seems an error has occured.\nError:`{exception}`\nIf you believe this to be a bug please report it to the technical mod team.")
+
+        await ctx.respond(embed=embed)
+
+        embed.description = f"Command `{ctx.command}` has raised an error.\nError with traceback\n`{''.join(tb.format_exception(None, exception, exception.__traceback__))}`"
+
+        if self.cache["errChannel"] == None:
+            if self.cache["logChannel"] == None:
+                return
+
+            chn = guild.get_channel(self.cache["logChannel"])
+            await chn.send(embed=embed)
+
+            return
+
+        chn = guild.get_channel(self.cache["errChannel"])
+
+        await chn.send(embed=embed)
 
     @ _lg.command(name="set", description="Sets a log channel.")
     @ checks.has_permissions(PermissionLevel.ADMINISTRATOR)
     async def _lg_set(self, ctx: ApplicationContext, log_channel: discord.Option(str, "The channel you want to set. Log channel is the default if none is set.",
                       choices=[OptionChoice("Logs channel", "logChannel"), OptionChoice("Moderation logs channel", "modChannel"), OptionChoice("Message logs channel", "msgChannel"),
-                               OptionChoice("Server logs channel", "srvChannel"), OptionChoice("Join/Leave logs channel", "jlvChannel"), OptionChoice("Member logs channel", "mbrChannel")]),
+                               OptionChoice("Server logs channel", "srvChannel"), OptionChoice(
+                                   "Join/Leave logs channel", "jlvChannel"), OptionChoice("Member logs channel", "mbrChannel"),
+                               OptionChoice("Error logs channel", "errChannel")]),
                       channel: discord.Option(discord.TextChannel, "The channel id you want to set the channel as.")):
         if ctx.guild.get_channel(channel.id) == None:
             embed = discord.Embed(
@@ -465,7 +543,8 @@ class Logging(BaseCog):
             "msgChannel": "message ",
             "srvChannel": "server ",
             "jlvChannel": "join/leave ",
-            "mbrChannel": "member "
+            "mbrChannel": "member ",
+            "errChannel": "error "
         }
 
         embed = discord.Embed(
