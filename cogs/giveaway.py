@@ -35,6 +35,7 @@ class Giveaway(BaseCog):
     async def load_cache(self):
         await super().load_cache()
 
+    async def after_load(self):
         await self.start_threads()
 
     async def start_threads(self):
@@ -46,7 +47,18 @@ class Giveaway(BaseCog):
         guild: discord.Guild = self.bot.get_guild(self.bot.config["guild_id"])
         channel: TextChannel = guild.get_channel(
             self.cache["giveaways"][str(message_id)]["channel"])
-        message = await channel.fetch_message(message_id)
+
+        try:
+            message = await channel.fetch_message(message_id)
+        except Exception as e:
+            self.bot.dispatch("error", e,
+                              f"There seems to be an active giveaway in {channel.mention} that the bot cannot access.",
+                              f"Delete the giveaway in {channel.mention} manually `ID: {message_id}`.")
+
+            self.cache["giveaways"].pop(str(message_id))
+            await self.update_db()
+
+            return
 
         await self.add_button(message)
 
@@ -161,8 +173,10 @@ class Giveaway(BaseCog):
 
         allowed_roles = Select(
             placeholder="Select allowed roles",
-            max_values=len(self.bot.config["levelRoles"]) if len(self.bot.config["levelRoles"]) <= 25 else 25,
-            options=[discord.SelectOption(label=guild.get_role(role).name, value=str(role)) for role in self.bot.config["levelRoles"]][:25]
+            max_values=len(self.bot.config["levelRoles"]) if len(
+                self.bot.config["levelRoles"]) <= 25 else 25,
+            options=[discord.SelectOption(label=guild.get_role(role).name, value=str(
+                role)) for role in self.bot.config["levelRoles"]][:25]
         )
 
         async def _roles_callback(interaction: Interaction):
