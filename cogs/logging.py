@@ -39,7 +39,33 @@ class Logging(BaseCog, ModerationListener, metaclass=mLogging):
 
 #--------------------------------------moderation logs---------------------------------------#
 
-    # TODO implement a custom event for moderation activity
+    @commands.Cog.listener()
+    async def on_member_ban(self, ctx):
+        pass
+    
+    @commands.Cog.listener()
+    async def on_member_warn(self, ctx):
+        print(vars(ctx))
+
+    @commands.Cog.listener()
+    async def on_member_pardon(self, ctx):
+        pass
+    
+    @commands.Cog.listener()
+    async def on_member_unban(self, ctx):
+        pass
+    
+    @commands.Cog.listener()
+    async def on_member_kick(self, ctx):
+        pass
+
+    @commands.Cog.listener()
+    async def on_member_mute(self, ctx):
+        pass
+    
+    @commands.Cog.listener()
+    async def on_member_unmute(self, ctx):
+        pass
 
 #----------------------------------------message logs----------------------------------------#
 
@@ -524,27 +550,6 @@ class Logging(BaseCog, ModerationListener, metaclass=mLogging):
         chn = guild.get_channel(self.cache["errChannel"])
 
         await chn.send(embed=embed)
-
-    async def on_member_ban(self, ctx):
-        pass
-
-    async def on_member_warn(self, ctx):
-        print(vars(ctx))
-
-    async def on_member_pardon(self, ctx):
-        pass
-
-    async def on_member_unban(self, ctx):
-        pass
-
-    async def on_member_kick(self, ctx):
-        pass
-
-    async def on_member_mute(self, ctx):
-        pass
-
-    async def on_member_unmute(self, ctx):
-        pass
 
     @ _lg.command(name="set", description="Sets a log channel.")
     @ checks.has_permissions(PermissionLevel.ADMINISTRATOR)
