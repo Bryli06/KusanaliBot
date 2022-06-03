@@ -124,7 +124,7 @@ class Moderation(BaseCog):
             self.cache["ban"].setdefault(str(members), []).append(
                 {"responsible": ctx.author.id, "reason": reason, "duration": duration, "time": datetime.now().timestamp()})
 
-            await self.moderation_listener.trigger("ban", Context(member = members, moderator = ctx.author.id, reason = reason, timestamp = datetime.now().timestamp(), duration = duration))
+            await self.moderation_listener.trigger("ban", Context(member=members, moderator=ctx.author.id, reason=reason, timestamp=datetime.now().timestamp(), duration=duration))
 
         await self.update_db()
         description = ""
@@ -139,8 +139,6 @@ class Moderation(BaseCog):
         embed = discord.Embed(
             title="Success", description=description)
         await ctx.respond(embed=embed)
-
-
 
     @commands.slash_command(name="unban", description="Unbans a member")
     @checks.has_permissions(PermissionLevel.OWNER)
@@ -161,8 +159,8 @@ class Moderation(BaseCog):
                 successful_ids += f"\n{members}"
                 self.cache["unban"].setdefault(str(members), []).append(
                     {"responsible": ctx.author.id, "reason": reason, "time": datetime.now().timestamp()})
-                
-                await self.moderation_listener.trigger("unban", Context(member = members, moderator = ctx.author.id, reason = reason, timestamp = datetime.now().timestamp()))
+
+                await self.moderation_listener.trigger("unban", Context(member=members, moderator=ctx.author.id, reason=reason, timestamp=datetime.now().timestamp()))
                 try:
                     self.cache["unban_queue"].pop(members)
                 except KeyError:
@@ -263,8 +261,8 @@ class Moderation(BaseCog):
 
             self.cache["kick"].setdefault(str(members), []).append(
                 {"responsible": ctx.author.id, "reason": reason, "time": datetime.now().timestamp()})
-            
-            await self.moderation_listener.trigger("kick", Context(member = members, moderator = ctx.author.id, reason = reason, timestamp = datetime.now().timestamp()))
+
+            await self.moderation_listener.trigger("kick", Context(member=members, moderator=ctx.author.id, reason=reason, timestamp=datetime.now().timestamp()))
 
         await self.update_db()
         description = ""
@@ -368,7 +366,7 @@ class Moderation(BaseCog):
             self.cache["mute"].setdefault(str(members), []).append(
                 {"responsible": ctx.author.id, "reason": reason, "duration": duration, "time": datetime.now().timestamp(), "roles": roles})
 
-            await self.moderation_listener.trigger("mute", Context(member = members, moderator = ctx.author.id, reason = reason, timestamp = datetime.now().timestamp(), duration = duration))
+            await self.moderation_listener.trigger("mute", Context(member=members, moderator=ctx.author.id, reason=reason, timestamp=datetime.now().timestamp(), duration=duration))
         await self.update_db()
         description = ""
         if successful_ids:
@@ -408,9 +406,10 @@ class Moderation(BaseCog):
                 self.cache["unmute"].setdefault(str(members), []).append(
                     {"responsible": ctx.author.id, "reason": reason, "time": datetime.now().timestamp()})
 
-                await self.moderation_listener.trigger("unmute", Context(member = members, moderator = ctx.author.id, reason = reason, timestamp = datetime.now().timestamp()))
-                try: 
-                    self.cache["unmute_queue"].pop(str(members)) #incase unmute before auto unmute
+                await self.moderation_listener.trigger("unmute", Context(member=members, moderator=ctx.author.id, reason=reason, timestamp=datetime.now().timestamp()))
+                try:
+                    # incase unmute before auto unmute
+                    self.cache["unmute_queue"].pop(str(members))
                 except KeyError:
                     pass
                 successful_ids += f"\n{members}"
@@ -503,11 +502,11 @@ class Moderation(BaseCog):
                 successful_ids += f"\n {members}"
                 self.cache["warn"].setdefault(str(members), []).append(
                     {"responsible": ctx.author.id, "reason": reason, "time": datetime.now().timestamp(), "id": self.cache["warnid"]})
-                
-                await self.moderation_listener.trigger("warn", Context(member = members, moderator = ctx.author.id, reason = reason, timestamp = datetime.now().timestamp(), id = self.cache["warnid"]))
-                
+
+                await self.moderation_listener.trigger("warn", Context(member=members, moderator=ctx.author.id, reason=reason, timestamp=datetime.now().timestamp(), id=self.cache["warnid"]))
+
                 self.cache["warnid"] += 1
-            
+
             except Exception as e:
                 print(e)
                 failed_ids += f"\n {members}"
@@ -555,9 +554,9 @@ class Moderation(BaseCog):
             self.cache["pardon"][user][-1]["pardon_time"] = datetime.now().timestamp()
             self.cache["warn"][user].pop(idx)
             await self.update_db()
-            
-            await self.moderation_listener.trigger("pardon", Context(member = user, moderator = ctx.author.id, timestamp = datetime.now().timestamp(), id=self.cache["pardon"][user][-1]["id"]))
-            
+
+            await self.moderation_listener.trigger("pardon", Context(member=user, moderator=ctx.author.id, timestamp=datetime.now().timestamp(), id=self.cache["pardon"][user][-1]["id"]))
+
             embed = discord.Embed(
                 title="Success", description=f"Successfully pardoned warn of id {warnid}")
         else:
