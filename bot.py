@@ -1,3 +1,5 @@
+from threading import Thread, Timer
+from time import sleep
 import discord
 from discord.ext import commands
 
@@ -31,22 +33,13 @@ class KusanaliBot(commands.Bot):
         self.loop.create_task(self.config.load_cache_db(self.db))
 
         self.start_time = datetime.utcnow()
+
+        self.tasks_done = 0
+
         self.on_start()
 
-    # TODO implement error handling
-    """
-    async def on_error(self, event, *args, **kwargs):
-        embed = discord.Embed(title="Error",
-                              description=f"It seems `{event}({args})({kwargs})` has raised an error.\nError:`{sys.exc_info()[1].with_traceback}`\n.")
-
-        # add error logs channel
-    """
-
-    async def on_application_command_error(self, ctx: discord.ApplicationContext, exception: discord.DiscordException):
-        embed = discord.Embed(title="Error",
-                              description=f"It seems an error has occured.\nError:`{exception}`\nIf you believe this to be a bug please report it to the technical mod team.")
-
-        await ctx.respond(embed=embed)
+        thread = Thread(target=self.wait_for_tasks)
+        thread.start()
 
     def on_start(self):
         for cog in [file.replace('.py', '') for file in listdir("cogs") if isfile(join('cogs', file))]:
@@ -57,6 +50,23 @@ class KusanaliBot(commands.Bot):
                 logger.info(f"Successfully loaded {cog}")
             except Exception as e:
                 logger.error(f"Failed to load {cog}")
+                logger.error(f"Error: {e}")
+
+    def wait_for_tasks(self):
+        while self.tasks_done < len(self.cogs):
+            pass
+
+        self.loop.create_task(self.after_start())
+
+    async def after_start(self):
+        for cog in self.cogs:
+            logger.info(f"Executing after load for: {cog}")
+
+            try:
+                await self.cogs[cog].after_load()
+                logger.info(f"Successfully executed after load for {cog}")
+            except Exception as e:
+                logger.error(f"Failed to execute after load for {cog}")
                 logger.error(f"Error: {e}")
 
     async def get_session(self):
