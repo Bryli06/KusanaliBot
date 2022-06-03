@@ -10,16 +10,13 @@ from discord import ApplicationContext, CategoryChannel, ChannelType, Colour, Em
 from core import checks
 from core import listener
 from core.base_cog import BaseCog
-from core.listener import ModerationListener
 from core.checks import PermissionLevel
 from core import logger
 
 
-class mLogging(type(BaseCog), type(ModerationListener)):
-    pass
 
 
-class Logging(BaseCog, ModerationListener, metaclass=mLogging):
+class Logging(BaseCog): 
     _id = "logging"
 
     default_cache = {
