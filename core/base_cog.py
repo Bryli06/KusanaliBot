@@ -1,3 +1,4 @@
+import asyncio
 import discord
 from discord.ext import commands
 
@@ -27,3 +28,8 @@ class BaseCog(commands.Cog):
             db = self.default_cache
 
         self.cache = db
+
+        self.bot.tasks_done = self.bot.tasks_done + 1
+
+    async def after_load(self):
+        pass
