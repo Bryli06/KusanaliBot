@@ -107,6 +107,9 @@ class Logging(BaseCog, ModerationListener, metaclass=mLogging):
         if before.author.bot:
             return
 
+        if before.content == after.content:
+            return
+
         guild = self.bot.get_guild(self.bot.config["guild_id"])
 
         embed = discord.Embed(title=f"Message edited in #{before.channel.name}",
