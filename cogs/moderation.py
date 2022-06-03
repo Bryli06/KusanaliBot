@@ -28,11 +28,11 @@ class Moderation(BaseCog):
         "kick": {  # stores member who is kicked, who kicked, and reason for kick
 
         },
-        
+
         "mute": {
 
         },
-        
+
         "unmute": {
 
         },
@@ -70,11 +70,12 @@ class Moderation(BaseCog):
     async def load_cache(self):
         await super().load_cache()
 
+    async def after_load(self):
         for key, value in list(self.cache["unban_queue"].items()):
             await self._unban(key, value)
 
         for key, value in list(self.cache["unmute_queue"].items()):
-            await self._unmute(key,value)
+            await self._unmute(key, value)
 
     # @discord.default_permissions(ban_members=True)
 
@@ -125,7 +126,7 @@ class Moderation(BaseCog):
         if successful_ids:
             description += f"Succesfully banned: {successful_ids}.\n"
             if after:
-                description+=f"Unbanning at <t:{round(after.dt.timestamp())}:F>.\n."
+                description += f"Unbanning at <t:{round(after.dt.timestamp())}:F>.\n."
         if failed_ids:
             description += f"Could not ban: {failed_ids}"
         if not description:
@@ -153,7 +154,7 @@ class Moderation(BaseCog):
                 successful_ids += f"\n{members}"
                 self.cache["unban"].setdefault(str(members), []).append(
                     {"responsible": ctx.author.id, "reason": reason, "time": datetime.now().timestamp()})
-                
+
                 try:
                     self.cache["unban_queue"].pop(members)
                 except KeyError:
@@ -298,20 +299,22 @@ class Moderation(BaseCog):
         """
         self.cache["muterole"] = role.id
         await self.update_db()
-        embed = discord.Embed(title="Success", description=f"Successfully set the mute role as {role.mention}")
+        embed = discord.Embed(
+            title="Success", description=f"Successfully set the mute role as {role.mention}")
         await ctx.respond(embed=embed)
 
     @commands.slash_command(name="mute", description="Mutes a member")
     @checks.has_permissions(PermissionLevel.OWNER)
     async def mute(self, ctx: ApplicationContext, memberlist: discord.Option(str, description="The members you want to mute."),
-                  duration: discord.Option(str, description="How long to mute the member for. Leave blank to permenant.", default="inf"),
-                  reason: discord.Option(str, description="Reason for mute.", default="")):
+                   duration: discord.Option(str, description="How long to mute the member for. Leave blank to permenant.", default="inf"),
+                   reason: discord.Option(str, description="Reason for mute.", default="")):
         """
         Mutes a member via /mute [members] [duration: Optional] [reason: Optional]
 
         """
         if not self.cache["muterole"]:
-            embed = discord.Embed(title="Error", description="Please set a mute role first by running /setmute [role]")
+            embed = discord.Embed(
+                title="Error", description="Please set a mute role first by running /setmute [role]")
             await ctx.respond(embed=embed)
             return
         after = None
@@ -322,7 +325,7 @@ class Moderation(BaseCog):
             except Exception as e:
                 embed = discord.Embed(title="Error", description=e)
                 await ctx.respond(embed=embed)
-                
+
         memberlist = re.sub("[^0-9 ]", " ", memberlist)
         member = memberlist.split()
         successful_ids = ""
@@ -335,16 +338,16 @@ class Moderation(BaseCog):
                 dm = await _member.create_dm()
                 await dm.send(f"You have been muted in {ctx.guild.name}. Reason: {reason}")
             except:
-                logger.error(f"Can not message {members}.")
+                self.logger.error(f"Can not message {members}.")
             try:
                 role = [ctx.guild.get_role(self.cache["muterole"])]
-                roleList= _member.roles
+                roleList = _member.roles
                 roles = [None] * len(roleList)
                 for idx, r in enumerate(roleList):
                     roles[idx] = r.id
-                await _member.edit(roles = role)
+                await _member.edit(roles=role)
             except Exception as e:
-                logger.error(e)
+                self.logger.error(e)
                 failed_ids += f"\n {members}"
                 continue
             successful_ids += f"\n {members}"
@@ -353,14 +356,14 @@ class Moderation(BaseCog):
                 await self._unmute(members, after.dt)
 
             self.cache["mute"].setdefault(str(members), []).append(
-                    {"responsible": ctx.author.id, "reason": reason, "duration": duration, "time": datetime.now().timestamp(), "roles": roles})
+                {"responsible": ctx.author.id, "reason": reason, "duration": duration, "time": datetime.now().timestamp(), "roles": roles})
 
         await self.update_db()
         description = ""
         if successful_ids:
             description += f"Succesfully muted: {successful_ids}.\n"
             if after:
-                description+=f"Unmuting at <t:{round(after.dt.timestamp())}:F>.\n."
+                description += f"Unmuting at <t:{round(after.dt.timestamp())}:F>.\n."
         if failed_ids:
             description += f"Could not mute: {failed_ids}"
         if not description:
@@ -372,7 +375,7 @@ class Moderation(BaseCog):
     @commands.slash_command(name="unmute", description="Unmutes a member")
     @checks.has_permissions(PermissionLevel.OWNER)
     async def unmute(self, ctx: ApplicationContext, memberlist: discord.Option(str, description="The members you want to unmute."),
-                    reason: discord.Option(str, description="Reason for unmute.", default="")):
+                     reason: discord.Option(str, description="Reason for unmute.", default="")):
         """
         Unmutes a member via /unmute [members] [reason: optional]
 
@@ -386,18 +389,20 @@ class Moderation(BaseCog):
         for members in member:
             _member = guild.get_member(int(members))
             if muteRole in _member.roles:
-                listRoles = [None] * len(self.cache["mute"][members][-1]["roles"])
+                listRoles = [None] * \
+                    len(self.cache["mute"][members][-1]["roles"])
                 for idx, r in enumerate(self.cache["mute"][members][-1]["roles"]):
                     listRoles[idx] = guild.get_role(r)
                 await _member.edit(roles=listRoles)
                 self.cache["unmute"].setdefault(str(members), []).append(
                     {"responsible": ctx.author.id, "reason": reason, "time": datetime.now().timestamp()})
 
-                try: 
-                    self.cache["unmute_queue"].pop(str(members)) #incase unmute before auto unmute
+                try:
+                    # incase unmute before auto unmute
+                    self.cache["unmute_queue"].pop(str(members))
                 except KeyError:
                     pass
-                successful_ids+=f"\n{members}"
+                successful_ids += f"\n{members}"
             else:
                 failed_ids += f"\n{members}"
         await self.update_db()
@@ -411,7 +416,6 @@ class Moderation(BaseCog):
         embed = discord.Embed(
             title="Success", description=description)
         await ctx.respond(embed=embed)
-
 
     async def _unmute(self, member, time):
         now = datetime.utcnow()
@@ -436,10 +440,9 @@ class Moderation(BaseCog):
             self.cache["unmute"].setdefault(str(member), []).append(
                 {"responsible": self.bot.application_id, "reason": f"Automated Unmute", "time": datetime.now().timestamp()})
         except Exception as e:
-            logger.error(f"{e}")
+            self.logger.error(f"{e}")
         self.cache["unmute_queue"].pop(member)
         await self.update_db()
-    
 
     @commands.slash_command(name="mutes", description="Lists all mutes and unmutes for a member")
     @checks.has_permissions(PermissionLevel.OWNER)
@@ -469,7 +472,6 @@ class Moderation(BaseCog):
             title=f"{member.name} ({member.id})", description=description)
         await ctx.respond(embed=embed)
 #----------------------------------------Warn----------------------------------------#
-
 
     @commands.slash_command(name="warn", description="Warns a member")
     @checks.has_permissions(PermissionLevel.OWNER)
@@ -670,8 +672,8 @@ class Moderation(BaseCog):
     @checks.has_permissions(PermissionLevel.OWNER)
     async def slowmode(self, ctx: ApplicationContext, channel: discord.Option(discord.TextChannel, description="The channel you want to set slowmode.", default=None), time: discord.Option(str, description="The slowmode time.", default="0s")):
         regex = (r'((?P<hours>-?\d+)h)?'
-                   r'((?P<minutes>-?\d+)m)?'
-                   r'((?P<seconds>-?\d+)s)?')
+                 r'((?P<minutes>-?\d+)m)?'
+                 r'((?P<seconds>-?\d+)s)?')
         match = re.compile(regex, re.IGNORECASE).match(str(time))
         seconds = None
 
@@ -688,25 +690,26 @@ class Moderation(BaseCog):
                         seconds += int(v)
 
         if seconds is None:
-            embed = discord.Embed(title="Error", description=f"Could not parse time: {time}. Make sure it is in the form []h[]m[]s.")
+            embed = discord.Embed(
+                title="Error", description=f"Could not parse time: {time}. Make sure it is in the form []h[]m[]s.")
             await ctx.respond(embed=embed)
             return
 
         if seconds > 21600:
-            embed = discord.Embed(title="Error", description=f"Parsed time {seconds}s too large. Maximum slowmode is 6h.")
+            embed = discord.Embed(
+                title="Error", description=f"Parsed time {seconds}s too large. Maximum slowmode is 6h.")
             await ctx.respond(embed=embed)
             return
-        
+
         if not channel:
             channel = ctx.channel
 
-        await channel.edit(slowmode_delay = seconds)
+        await channel.edit(slowmode_delay=seconds)
 
-        embed = discord.Embed(title="Success!", description=f"Successfully set slowmode in {channel.mention} to {seconds}s.")
+        embed = discord.Embed(
+            title="Success!", description=f"Successfully set slowmode in {channel.mention} to {seconds}s.")
         await ctx.respond(embed=embed)
-
 
 
 def setup(bot):
     bot.add_cog(Moderation(bot))
-
