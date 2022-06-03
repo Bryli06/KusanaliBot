@@ -19,7 +19,7 @@ class BaseCog(commands.Cog):
         await self.db.find_one_and_update(
             {"_id": self._id},
             {"$set": self.cache},
-            upsert=True,
+                 upsert=True,
         )
 
     async def load_cache(self):

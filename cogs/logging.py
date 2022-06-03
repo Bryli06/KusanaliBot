@@ -1,3 +1,4 @@
+import traceback as tb
 from copy import deepcopy
 from datetime import datetime
 import time
@@ -7,13 +8,18 @@ from discord.ext import commands
 from discord import ApplicationContext, CategoryChannel, ChannelType, Colour, EmbedField, ForumChannel, Interaction, OptionChoice, Permissions, SlashCommandGroup, StageChannel, TextChannel, VoiceChannel
 
 from core import checks
+from core import listener
 from core.base_cog import BaseCog
+from core.listener import ModerationListener
 from core.checks import PermissionLevel
+from core import logger
 
-import traceback as tb
+
+class mLogging(type(BaseCog), type(ModerationListener)):
+    pass
 
 
-class Logging(BaseCog):
+class Logging(BaseCog, ModerationListener, metaclass=mLogging):
     _id = "logging"
 
     default_cache = {
@@ -518,6 +524,27 @@ class Logging(BaseCog):
         chn = guild.get_channel(self.cache["errChannel"])
 
         await chn.send(embed=embed)
+
+    async def on_member_ban(self, ctx):
+        pass
+
+    async def on_member_warn(self, ctx):
+        print(vars(ctx))
+
+    async def on_member_pardon(self, ctx):
+        pass
+
+    async def on_member_unban(self, ctx):
+        pass
+
+    async def on_member_kick(self, ctx):
+        pass
+
+    async def on_member_mute(self, ctx):
+        pass
+
+    async def on_member_unmute(self, ctx):
+        pass
 
     @ _lg.command(name="set", description="Sets a log channel.")
     @ checks.has_permissions(PermissionLevel.ADMINISTRATOR)
