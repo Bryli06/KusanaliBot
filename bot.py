@@ -1,5 +1,4 @@
-from threading import Thread, Timer
-from time import sleep
+from threading import Thread
 import discord
 from discord.ext import commands
 
@@ -169,15 +168,6 @@ class KusanaliBot(commands.Bot):
 
 
 def main():
-    try:
-        # noinspection PyUnresolvedReferences
-        import uvloop
-
-        logger.debug("Setting up with uvloop.")
-        uvloop.install()
-    except ImportError:
-        pass
-
     bot = KusanaliBot()
     bot.run()
 
