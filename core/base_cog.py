@@ -13,6 +13,8 @@ class BaseCog(commands.Cog):
         self.db = self.bot.db[self._id]
         self.cache = {}
 
+        self.guild: discord.Guild = self.bot.get_guild(self.bot.config["guild_id"])
+
         self.bot.loop.create_task(self.load_cache())
 
     async def update_db(self):  # updates database with cache

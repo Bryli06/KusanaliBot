@@ -32,7 +32,7 @@ class Configurator(BaseCog):
         super().__init__(bot)
 
     async def get_member_ids(self, ids):
-        regex = r"(?<=<@&)\d*(?=>)"
+        regex = r"\d{18}"
 
         return re.findall(regex, ids)
 
@@ -64,14 +64,12 @@ class Configurator(BaseCog):
 
             return
 
-        guild: discord.Guild = self.bot.get_guild(self.bot.config["guild_id"])
-
         description = ""
         for role_id in role_ids:
             if int(role_id) in self.cache["levelRoles"]:
                 description += f"The role <@&{role_id}> already exists in the database.\n"
-            elif guild.get_role(int(role_id)) == None:
-                description += "The role was not found in the guild."
+            elif self.guild.get_role(int(role_id)) == None:
+                description += f"The role with ID `{role_id}` was not found in the guild."
             else:
                 self.cache["levelRoles"].append(int(role_id))
                 description += f"The role <@&{role_id}> was added into the database.\n"

@@ -44,8 +44,7 @@ class Giveaway(BaseCog):
             await self.start_thread(int(message_id))
 
     async def start_thread(self, message_id):
-        guild: discord.Guild = self.bot.get_guild(self.bot.config["guild_id"])
-        channel: TextChannel = guild.get_channel(
+        channel: TextChannel = self.guild.get_channel(
             self.cache["giveaways"][str(message_id)]["channel"])
 
         try:
@@ -169,13 +168,11 @@ class Giveaway(BaseCog):
     async def _ga_create(self, ctx: ApplicationContext, reward: discord.Option(str, "The name of the reward."),
                          winners: discord.Option(int, "The number of winners.", min_value=1),
                          seconds: discord.Option(int, "For how long you wish the giveaway to stay up.", min_value=1)):
-        guild: discord.Guild = self.bot.get_guild(self.bot.config["guild_id"])
-
         allowed_roles = Select(
             placeholder="Select allowed roles",
             max_values=len(self.bot.config["levelRoles"]) if len(
                 self.bot.config["levelRoles"]) <= 25 else 25,
-            options=[discord.SelectOption(label=guild.get_role(role).name, value=str(
+            options=[discord.SelectOption(label=self.guild.get_role(role).name, value=str(
                 role)) for role in self.bot.config["levelRoles"]][:25]
         )
 

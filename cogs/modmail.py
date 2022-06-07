@@ -3,7 +3,7 @@ import discord
 from discord.ext import commands
 from discord.ui import Select, View
 
-from discord import ApplicationContext, CategoryChannel, Embed, Interaction, OptionChoice, SlashCommandGroup, guild_only
+from discord import ApplicationContext, CategoryChannel, Embed, Interaction, OptionChoice, SlashCommandGroup
 
 from core import checks
 from core.base_cog import BaseCog
@@ -34,9 +34,8 @@ class Modmail(BaseCog):
     async def on_message(self, message: discord.Message):
         if message.author.bot or message.guild != None or str(message.author.id) not in self.cache["userThreads"]:
             return
-
-        guild: discord.Guild = self.bot.get_guild(self.bot.config["guild_id"])
-        thread = guild.get_thread(
+            
+        thread = self.guild.get_thread(
             self.cache["userThreads"][str(message.author.id)])
 
         embed = discord.Embed(description=message.content, timestamp=datetime.now())
@@ -47,23 +46,6 @@ class Modmail(BaseCog):
 
     # Check for if the user is ending the session
     ending = False
-
-    @commands.Cog.listener()
-    async def on_raw_thread_delete(self, payload):
-        if self.ending:
-            return
-
-        for user in self.cache["userThreads"]:
-            if self.cache["userThreads"][user] == payload.thread_id:
-                self.cache["userThreads"].pop(user)
-
-                guild = self.bot.get_guild(payload.guild_id)
-                member = guild.get_member(int(user))
-                await member.send("Session was closed by staff.")
-
-                break
-
-        await self.update_db()
 
     @commands.Cog.listener()
     async def on_thread_delete(self, thread):
@@ -126,7 +108,7 @@ class Modmail(BaseCog):
 
         for user in self.cache["userThreads"]:
             if self.cache["userThreads"][user] == ctx.channel.id:
-                member = ctx.guild.get_member(int(user))
+                member = self.guild.get_member(int(user))
 
                 dm_channel = await member.create_dm()
                 await dm_channel.send(embed=embed)
@@ -142,10 +124,9 @@ class Modmail(BaseCog):
 
             return
 
-        guild: discord.Guild = self.bot.get_guild(self.bot.config["guild_id"])
-        modmail_channel = guild.get_channel(self._modmail_channel_id)
+        modmail_channel = self.guild.get_channel(self._modmail_channel_id)
 
-        member = guild.get_member(ctx.author.id)
+        member = self.guild.get_member(ctx.author.id)
 
         thread: discord.Thread = await modmail_channel.create_thread(name=title)
 
@@ -164,7 +145,7 @@ class Modmail(BaseCog):
 
         await thread.send(embed=embed)
 
-        role = guild.get_role(self._modmail_role_id)
+        role = self.guild.get_role(self._modmail_role_id)
         for member in role.members:
             break
             await thread.add_user(member)
@@ -184,8 +165,7 @@ class Modmail(BaseCog):
 
         self.ending = True
 
-        guild = self.bot.get_guild(self.bot.config["guild_id"])
-        thread = guild.get_thread(
+        thread = self.guild.get_thread(
             self.cache["userThreads"][str(ctx.author.id)])
 
         await thread.archive()
