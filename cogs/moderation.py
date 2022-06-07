@@ -1,11 +1,12 @@
+from email.policy import default
 import discord
 from discord.ext import commands
-from discord import SlashCommandGroup, ApplicationContext, SlashCommand, default_permissions, option
-from discord.commands import Option
+from discord import ApplicationContext, Interaction
+from discord.ui import View, Select
+
 from datetime import datetime
 
-from cogs.logging import Logging
-from core.listener import Context
+from core.context import ModContext
 import copy
 from math import floor
 import re
@@ -21,47 +22,35 @@ class Moderation(BaseCog):
     _id = "moderation"
 
     default_cache = {
-        "ban": {  # stores member who is banned, who banned, and reason for ban
+        "muteRole": None,
+        "bans": {  # stores member who is banned, who banned, and reason for ban
 
         },
-        "unban": {  # stores unban log and who unbanned member
+        "unbans": {  # stores unban log and who unbanned member
 
         },
-        "kick": {  # stores member who is kicked, who kicked, and reason for kick
+        "kicks": {  # stores member who is kicked, who kicked, and reason for kick
 
         },
-
-        "mute": {
-
-        },
-
-        "unmute": {
+        "mutes": {
 
         },
-
-        "muterole": None,
-
-        "warn": {  # stores member who is warns, who warned, warning id, and warning
+        "unmutes": {
 
         },
-
-        "warnid": 0,
-
-        "pardon": {  # stores pardoned warns
+        "warns": {  # stores member who is warns, who warned, warning id, and warning
 
         },
-
-        "note": {  # stores member, who noted, note id, and note
-
-        },
-
-        "noteid": 0,
-
-        "unban_queue": {  # stores members who need to be unbanned and what time to unban
+        "pardons": {  # stores pardoned warns
 
         },
+        "notes": {  # stores member, who noted, note id, and note
 
-        "unmute_queue": {
+        },
+        "unbanQueue": {  # stores members who need to be unbanned and what time to unban
+
+        },
+        "unmuteQueue": {
 
         }
     }
@@ -73,109 +62,141 @@ class Moderation(BaseCog):
         await super().load_cache()
 
     async def after_load(self):
-        for key, value in list(self.cache["unban_queue"].items()):
+        for key, value in list(self.cache["unbanQueue"].items()):
             await self._unban(key, value)
 
-        for key, value in list(self.cache["unmute_queue"].items()):
+        for key, value in list(self.cache["unmuteQueue"].items()):
             await self._unmute(key, value)
 
     # @discord.default_permissions(ban_members=True)
+
+    async def get_member_ids(self, ids):
+        regex = r"\d{18}"
+
+        return re.findall(regex, ids)
 
 #----------------------------------------ban and unbans----------------------------------------#
 
     @commands.slash_command(name="ban", description="Bans a member")
     @checks.has_permissions(PermissionLevel.OWNER)
-    async def ban(self, ctx: ApplicationContext, memberlist: discord.Option(str, description="The members you want to ban."),
+    async def ban(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to ban."),
                   duration: discord.Option(str, description="How long to ban the member for. Leave blank to permenantly ban.", default="inf"),
                   reason: discord.Option(str, description="Reason for ban.", default="")):
         """
         Bans a member via /ban [members] [duration: Optional] [reason: Optional]
 
         """
+
         after = None
         if duration != "inf":
             after = UserFriendlyTime()
+
             try:
                 await after.convert(duration)
             except Exception as e:
                 embed = discord.Embed(title="Error", description=e)
                 await ctx.respond(embed=embed)
-        memberlist = re.sub("[^0-9 ]", " ", memberlist)
-        member = memberlist.split()
-        successful_ids = ""
-        failed_ids = ""
-        for members in member:
-            _member = await self.bot.fetch_user(members)
-            try:
-                await _member.send(f"You have been banned from {ctx.guild.name}. Reason: {reason}")
-            except:
-                self.logger.error(f"Can not message {members}.")
-            try:
-                await ctx.guild.ban(_member, reason=reason)
-            except Exception as e:
-                failed_ids += f"\n {members}"
-                continue
-            successful_ids += f"\n {members}"
-            if after:
-                self.cache["unban_queue"][str(members)] = after.dt
-                await self._unban(members, after.dt)
 
-            self.cache["ban"].setdefault(str(members), []).append(
+                return
+
+        member_ids = self.get_member_ids(members)
+
+        if len(member_ids) == 0:
+            embed = discord.Embed(
+                title="Error", description="No valid member IDs provided.")
+            await ctx.respond(embed=embed)
+
+            return
+
+        description = ""
+        for member_id in member_ids:
+            member = await self.bot.fetch_user(int(member_id))
+
+            if member == None:
+                description += f"The member with ID `{member_id}` was not found.\n"
+                continue
+
+            try:
+                await self.guild.ban(member, reason=reason)
+                description += f"The member {member.mention} `{member.name}#{member.discriminator}` has been successfully banned, "
+            except Exception as e:
+                description += f"The member {member.mention} `{member.name}#{member.discriminator}` could not be banned.\n"
+                continue
+
+            try:
+                await member.send(f"You have been banned from {self.guild.name}. Reason: {reason}")
+                description += "and a message has been sent.\n"
+            except:
+                self.logger.error(f"Could not message {member.name}.")
+                description += "but a message could not be sent.\n"
+
+            if after:
+                self.cache["unbanQueue"][str(member_id)] = after.dt
+                await self._unban(member, after.dt)
+
+            self.cache["bans"].setdefault(str(member_id), []).append(
                 {"responsible": ctx.author.id, "reason": reason, "duration": duration, "time": datetime.now().timestamp()})
 
-            self.bot.dispatch("member_ban", Context(member=members, moderator=ctx.author.id, reason=reason, timestamp=datetime.now().timestamp(), duration=duration))
+            self.bot.dispatch("member_ban", ModContext(member=member, moderator=ctx.author,
+                              reason=reason, timestamp=datetime.now().timestamp(), duration=duration))
 
         await self.update_db()
-        description = ""
-        if successful_ids:
-            description += f"Succesfully banned: {successful_ids}.\n"
-            if after:
-                description += f"Unbanning at <t:{round(after.dt.timestamp())}:F>.\n."
-        if failed_ids:
-            description += f"Could not ban: {failed_ids}"
-        if not description:
-            description = f"No users parsed, please mention the user or use their id."
+
+        if after:
+            description += f"\nUnbanning at <t:{round(after.dt.timestamp())}:F>.\n"
+
         embed = discord.Embed(
-            title="Success", description=description)
+            title="Report", description=description)
         await ctx.respond(embed=embed)
 
     @commands.slash_command(name="unban", description="Unbans a member")
     @checks.has_permissions(PermissionLevel.OWNER)
-    async def unban(self, ctx: ApplicationContext, memberlist: discord.Option(str, description="The members you want to unban."),
+    async def unban(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to unban."),
                     reason: discord.Option(str, description="Reason for unban.", default="")):
         """
         Unbans a member via /unban [members] 
 
         """
-        memberlist = re.sub("[^0-9 ]", " ", memberlist)
-        member = memberlist.split()
-        successful_ids = ""
-        failed_ids = ""
-        for members in member:
-            _member = await self.bot.fetch_user(members)
-            try:
-                await self.bot.get_guild(self.bot.config["guild_id"]).unban(_member)
-                successful_ids += f"\n{members}"
-                self.cache["unban"].setdefault(str(members), []).append(
-                    {"responsible": ctx.author.id, "reason": reason, "time": datetime.now().timestamp()})
 
-                self.bot.dispatch("member_unban", Context(member=members, moderator=ctx.author.id, reason=reason, timestamp=datetime.now().timestamp()))
+        member_ids = self.get_member_ids(members)
+
+        if len(member_ids) == 0:
+            embed = discord.Embed(
+                title="Error", description="No valid member IDs provided.")
+            await ctx.respond(embed=embed)
+
+            return
+
+        description = ""
+        for member_id in member_ids:
+            member = await self.bot.fetch_user(int(member_id))
+
+            if member == None:
+                description += f"The member with ID `{member_id}` was not found.\n"
+                continue
+
+            try:
+                await self.guild.unban(member, reason=reason)
+                description += f"The member {member.mention} `{member.name}#{member.discriminator}` has been successfully unbanned."
+
                 try:
-                    self.cache["unban_queue"].pop(members)
+                    self.cache["unbanQueue"].pop(member_id)
                 except KeyError:
                     pass
-            except:
-                failed_ids += f"\n{members}"
+            except Exception as e:
+                description += f"The member {member.mention} `{member.name}#{member.discriminator}` could not be unbanned.\n"
+                continue
+
+            self.cache["unbans"].setdefault(str(member_id), []).append(
+                {"responsible": ctx.author.id, "reason": reason, "time": datetime.now().timestamp()})
+
+            self.bot.dispatch("member_unban", ModContext(
+                member=member, moderator=ctx.author, reason=reason, timestamp=datetime.now().timestamp()))
+
         await self.update_db()
-        description = ""
-        if successful_ids:
-            description += f"Successfully unbanned: {successful_ids}\n"
-        if failed_ids:
-            description += f"Users not banned: {failed_ids}"
-        if not description:
-            description = f"No users parsed, please mention the user or use their id."
+
         embed = discord.Embed(
-            title="Success", description=description)
+            title="Report", description=description)
         await ctx.respond(embed=embed)
 
     async def _unban(self, member, time):
@@ -190,240 +211,312 @@ class Moderation(BaseCog):
     def _unban_after(self, member):  # bruh async stuff
         return self.bot.loop.create_task(self._unban_helper(member))
 
-    async def _unban_helper(self, member):
-        _member = await self.bot.fetch_user(member)
+    async def _unban_helper(self, member_id):
         try:
-            await self.bot.get_guild(self.bot.config["guild_id"]).unban(_member)
-            self.cache["unban"].setdefault(str(member), []).append(
-                {"responsible": self.bot.application_id, "reason": f"Automated Unban", "time": datetime.now().timestamp()})
+            member = await self.bot.fetch_user(member_id)
+
+            await self.guild.unban(member)
+
+            self.cache["unbans"].setdefault(str(member_id), []).append(
+                {"responsible": self.bot.user, "reason": "Automated unban", "time": datetime.now().timestamp()})
         except Exception as e:
             self.logger.error(f"{e}")
-        self.cache["unban_queue"].pop(member)
+
+        self.cache["unbanQueue"].pop(member_id)
         await self.update_db()
 
-    @commands.slash_command(name="bans", description="Lists all bans and unbans for a member")
+    @commands.slash_command(name="bans", description="Lists all bans and unbans for a member.")
     @checks.has_permissions(PermissionLevel.OWNER)
     async def bans(self, ctx: ApplicationContext, member: discord.Option(discord.Member, description="The members you want to get bans.")):
-        """Lists all the bans and unbans for a member"""
-        userid = str(member.id)
-        if userid not in self.cache["ban"]:
+        """
+        Lists all the bans and unbans for a member
+
+        """
+
+        member_id = str(member.id)
+
+        if member_id not in self.cache["bans"]:
             embed = discord.Embed(
-                title=f"{member.name} ({member.id})", description="This user has not been banned.")
+                title=f"{member.name}#{member.discriminator} ({member.id})", description="This user has not been banned.")
             await ctx.respond(embed=embed)
             return
-        actionlist = copy.deepcopy(self.cache["ban"][userid])
-        if userid in self.cache["unban"]:
-            actionlist.extend(self.cache["unban"][userid])
-        actionlist = sorted(actionlist, key=lambda d: d['time'])
+
+        actions = copy.deepcopy(self.cache["bans"][member_id])
+        if member_id in self.cache["unbans"]:
+            actions.extend(self.cache["unbans"][member_id])
+
+        actions = sorted(actions, key=lambda d: d['time'])
+
         description = ""
-        for action in actionlist:
+        for action in actions:
             if "duration" in action:
-                _moderator = await self.bot.fetch_user(action["responsible"])
-                description += f'**Ban**\n Moderator: {_moderator.mention} ({action["responsible"]}) \n Reason: {action["reason"]} \n Duration: {action["duration"]} \n Date: <t:{round(action["time"])}:F> \n\n'
+                moderator = await self.bot.fetch_user(action["responsible"])
+                description += f'**Ban**\n Moderator: {moderator.mention} ({action["responsible"]}) \n Reason: {action["reason"]} \n Duration: {action["duration"]} \n Date: <t:{round(action["time"])}:F> \n\n'
             else:
-                _moderator = await self.bot.fetch_user(action["responsible"])
-                description += f'**Unban**\n Moderator: {_moderator.mention} ({action["responsible"]}) \n Reason: {action["reason"]} \n Date: <t:{round(action["time"])}:F> \n\n'
+                moderator = await self.bot.fetch_user(action["responsible"])
+                description += f'**Unban**\n Moderator: {moderator.mention} ({action["responsible"]}) \n Reason: {action["reason"]} \n Date: <t:{round(action["time"])}:F> \n\n'
+
         if not description:
             description = "This user has not been banned."
+
         embed = discord.Embed(
             title=f"{member.name} ({member.id})", description=description)
         await ctx.respond(embed=embed)
 
 
-#----------------------------------------Kicks----------------------------------------#
-
+#----------------------------------------kicks----------------------------------------#
 
     @commands.slash_command(name="kick", description="Kicks a member")
     @checks.has_permissions(PermissionLevel.OWNER)
-    async def kick(self, ctx: ApplicationContext, memberlist: discord.Option(str, description="The members you want to kick."),
+    async def kick(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to kick."),
                    reason: discord.Option(str, description="Reason for kick.", default="")):
         """
         Kicks a member via /kick [members] [reason: Optional]
 
         """
-        memberlist = re.sub("[^0-9 ]", " ", memberlist)
-        member = memberlist.split()
-        successful_ids = ""
-        failed_ids = ""
-        for members in member:
-            _member = await self.bot.fetch_user(members)
-            try:
-                await _member.send(f"You have been kicked from {ctx.guild.name}. Reason: {reason}")
-            except:
-                self.logger.error(f"Can not message {members}.")
-            try:
-                await ctx.guild.kick(_member, reason=reason)
-            except Exception as e:
-                failed_ids += f"\n {members}"
-                continue
-            successful_ids += f"\n {members}"
 
-            self.cache["kick"].setdefault(str(members), []).append(
+        member_ids = self.get_member_ids(members)
+
+        if len(member_ids) == 0:
+            embed = discord.Embed(
+                title="Error", description="No valid member IDs provided.")
+            await ctx.respond(embed=embed)
+
+            return
+
+        description = ""
+        for member_id in member_ids:
+            member = await self.bot.fetch_user(int(member_id))
+
+            if member == None:
+                description += f"The member with ID `{member_id}` was not found.\n"
+                continue
+
+            try:
+                await self.guild.kick(member, reason=reason)
+                description += f"The member {member.mention} `{member.name}#{member.discriminator}` has been successfully kicked, "
+            except Exception as e:
+                description += f"The member {member.mention} `{member.name}#{member.discriminator}` could not be kicked.\n"
+                continue
+
+            try:
+                await member.send(f"You have been kicked from {self.guild.name}. Reason: {reason}")
+                description += "and a message has been sent.\n"
+            except:
+                self.logger.error(f"Could not message {member.name}.")
+                description += "but a message could not be sent.\n"
+
+            self.cache["kicks"].setdefault(str(member_id), []).append(
                 {"responsible": ctx.author.id, "reason": reason, "time": datetime.now().timestamp()})
 
-            self.bot.dispatch("member_kick", Context(member=members, moderator=ctx.author.id, reason=reason, timestamp=datetime.now().timestamp()))
+            self.bot.dispatch("member_kick", ModContext(member=member, moderator=ctx.author,
+                              reason=reason, timestamp=datetime.now().timestamp()))
 
         await self.update_db()
-        description = ""
-        if successful_ids:
-            description += f"Succesfully kicked: {successful_ids}.\n"
-        if failed_ids:
-            description += f"Could not kick: {failed_ids}"
-        if not description:
-            description = f"No users parsed, please mention the user or use their id."
+
         embed = discord.Embed(
-            title="Success", description=description)
+            title="Report", description=description)
         await ctx.respond(embed=embed)
 
-    @commands.slash_command(name="kicks", description="Lists all bans and unbans for a member")
+    @commands.slash_command(name="kicks", description="Lists all kicks for a member.")
     @checks.has_permissions(PermissionLevel.OWNER)
     async def kicks(self, ctx: ApplicationContext, member: discord.Option(discord.Member, description="The members you want to get bans.")):
-        """Lists all the bans and unbans for a member"""
-        userid = str(member.id)
-        if userid not in self.cache["kick"]:
+        """
+        Lists all the kicks for a member
+
+        """
+
+        member_id = str(member.id)
+
+        if member_id not in self.cache["kicks"]:
             embed = discord.Embed(
                 title=f"{member.name} ({member.id})", description="This user has not been kicked.")
             await ctx.respond(embed=embed)
             return
-        actionlist = copy.deepcopy(self.cache["kick"][userid])
-        actionlist = sorted(actionlist, key=lambda d: d['time'])
+
+        actions = copy.deepcopy(self.cache["kicks"][member_id])
+        actions = sorted(actions, key=lambda d: d['time'])
+
         description = ""
-        for action in actionlist:
-            _moderator = await self.bot.fetch_user(action["responsible"])
-            description += f'**Kick**\n Moderator: {_moderator.mention} ({action["responsible"]}) \n Reason: {action["reason"]} \n Date: <t:{round(action["time"])}:F> \n\n'
+        for action in actions:
+            moderator = await self.bot.fetch_user(action["responsible"])
+            description += f'**Kick**\n Moderator: {moderator.mention} ({action["responsible"]}) \n Reason: {action["reason"]} \n Date: <t:{round(action["time"])}:F> \n\n'
+
         if not description:
             description = "This user not been kicked."
+
         embed = discord.Embed(
             title=f"{member.name} ({member.id})", description=description)
         await ctx.respond(embed=embed)
+
 #----------------------------------------Mute and Unmute----------------------------------------#
 
-    @commands.slash_command(name="setmute", description="Sets the mute role")
+    @commands.slash_command(name="setmute", description="Sets the mute role.")
     @checks.has_permissions(PermissionLevel.OWNER)
     async def setmute(self, ctx: ApplicationContext, role: discord.Option(discord.Role, description="mute role")):
         """
         Sets the mute role via /mute [role]
+
         """
-        self.cache["muterole"] = role.id
+
+        if self.guild.get_role(role.id) == None:
+            embed = discord.Embed(
+                title="Success", description=f"Role was not found in the guild.")
+            await ctx.respond(embed=embed)
+
+            return
+
+        self.cache["muteRole"] = role.id
         await self.update_db()
+
         embed = discord.Embed(
             title="Success", description=f"Successfully set the mute role as {role.mention}")
         await ctx.respond(embed=embed)
 
     @commands.slash_command(name="mute", description="Mutes a member")
     @checks.has_permissions(PermissionLevel.OWNER)
-    async def mute(self, ctx: ApplicationContext, memberlist: discord.Option(str, description="The members you want to mute."),
+    async def mute(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to mute."),
                    duration: discord.Option(str, description="How long to mute the member for. Leave blank to permenant.", default="inf"),
                    reason: discord.Option(str, description="Reason for mute.", default="")):
         """
         Mutes a member via /mute [members] [duration: Optional] [reason: Optional]
 
         """
-        if not self.cache["muterole"]:
+
+        if not self.cache["muteRole"]:
             embed = discord.Embed(
-                title="Error", description="Please set a mute role first by running /setmute [role]")
+                title="Error", description="Please set a mute role first by running `/setmute [role]`")
             await ctx.respond(embed=embed)
+
             return
+
         after = None
         if duration != "inf":
             after = UserFriendlyTime()
+
             try:
                 await after.convert(duration)
             except Exception as e:
                 embed = discord.Embed(title="Error", description=e)
                 await ctx.respond(embed=embed)
 
-        memberlist = re.sub("[^0-9 ]", " ", memberlist)
-        member = memberlist.split()
-        successful_ids = ""
-        failed_ids = ""
-        guild = self.bot.get_guild(self.bot.config["guild_id"])
-        for members in member:
-            _member = guild.get_member(int(members))
-            roles = None
-            try:
-                dm = await _member.create_dm()
-                await dm.send(f"You have been muted in {ctx.guild.name}. Reason: {reason}")
-            except:
-                self.logger.error(f"Can not message {members}.")
-            try:
-                role = [ctx.guild.get_role(self.cache["muterole"])]
-                roleList = _member.roles
-                roles = [None] * len(roleList)
-                for idx, r in enumerate(roleList):
-                    roles[idx] = r.id
-                await _member.edit(roles=role)
-            except Exception as e:
-                self.logger.error(e)
-                failed_ids += f"\n {members}"
-                continue
-            successful_ids += f"\n {members}"
-            if after:
-                self.cache["unmute_queue"][str(members)] = after.dt
-                await self._unmute(members, after.dt)
+                return
 
-            self.cache["mute"].setdefault(str(members), []).append(
+        member_ids = self.get_member_ids(members)
+
+        if len(member_ids) == 0:
+            embed = discord.Embed(
+                title="Error", description="No valid member IDs provided.")
+            await ctx.respond(embed=embed)
+
+            return
+
+        mute_role = ctx.guild.get_role(self.cache["muteRole"])
+
+        description = ""
+        for member_id in member_ids:
+            member: discord.Member = await self.guild.get_member(int(member_id))
+
+            if member == None:
+                description += f"The member with ID `{member_id}` was not found.\n"
+                continue
+
+            if mute_role in member.roles:
+                description += f"The member with ID `{member_id}` is already muted.\n"
+                continue
+
+            try:
+                roles = [role.id for role in member.roles]
+                await member.edit(roles=[mute_role])
+
+                description += f"The member {member.mention} `{member.name}#{member.discriminator}` has been successfully muted, "
+            except Exception as e:
+                description += f"The member {member.mention} `{member.name}#{member.discriminator}` could not be muted.\n"
+                continue
+
+            try:
+                dm = await member.create_dm()
+                await dm.send(f"You have been muted in {self.guild.name}. Reason: {reason}")
+                description += "and a message has been sent.\n"
+            except:
+                self.logger.error(f"Could not message {member.name}.")
+                description += "but a message could not be sent.\n"
+
+            if after:
+                self.cache["unmuteQueue"][str(member_id)] = after.dt
+                await self._unmute(member, after.dt)
+
+            self.cache["mutes"].setdefault(str(member_id), []).append(
                 {"responsible": ctx.author.id, "reason": reason, "duration": duration, "time": datetime.now().timestamp(), "roles": roles})
 
-            self.bot.dispatch("member_mute", Context(member=members, moderator=ctx.author.id, reason=reason, timestamp=datetime.now().timestamp(), duration=duration))
+            self.bot.dispatch("member_mute", ModContext(member=member, moderator=ctx.author,
+                              reason=reason, timestamp=datetime.now().timestamp(), duration=duration))
+
         await self.update_db()
-        description = ""
-        if successful_ids:
-            description += f"Succesfully muted: {successful_ids}.\n"
-            if after:
-                description += f"Unmuting at <t:{round(after.dt.timestamp())}:F>.\n."
-        if failed_ids:
-            description += f"Could not mute: {failed_ids}"
-        if not description:
-            description = f"No users parsed, please mention the user or use their id."
+
+        if after:
+            description += f"\Unmuting at <t:{round(after.dt.timestamp())}:F>.\n"
+
         embed = discord.Embed(
-            title="Success", description=description)
+            title="Report", description=description)
         await ctx.respond(embed=embed)
 
-    @commands.slash_command(name="unmute", description="Unmutes a member")
+    @commands.slash_command(name="unmute", description="Unmutes a member.")
     @checks.has_permissions(PermissionLevel.OWNER)
-    async def unmute(self, ctx: ApplicationContext, memberlist: discord.Option(str, description="The members you want to unmute."),
+    async def unmute(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to unmute."),
                      reason: discord.Option(str, description="Reason for unmute.", default="")):
         """
         Unmutes a member via /unmute [members] [reason: optional]
 
         """
-        memberlist = re.sub("[^0-9 ]", " ", memberlist)
-        member = memberlist.split()
-        successful_ids = ""
-        failed_ids = ""
-        guild = self.bot.get_guild(self.bot.config["guild_id"])
-        muteRole = guild.get_role(self.cache["muterole"])
-        for members in member:
-            _member = guild.get_member(int(members))
-            if muteRole in _member.roles:
-                listRoles = [None] * \
-                    len(self.cache["mute"][members][-1]["roles"])
-                for idx, r in enumerate(self.cache["mute"][members][-1]["roles"]):
-                    listRoles[idx] = guild.get_role(r)
-                await _member.edit(roles=listRoles)
-                self.cache["unmute"].setdefault(str(members), []).append(
-                    {"responsible": ctx.author.id, "reason": reason, "time": datetime.now().timestamp()})
 
-                self.bot.dispatch("member_unmute", Context(member=members, moderator=ctx.author.id, reason=reason, timestamp=datetime.now().timestamp()))
+        member_ids = self.get_member_ids(members)
+
+        if len(member_ids) == 0:
+            embed = discord.Embed(
+                title="Error", description="No valid member IDs provided.")
+            await ctx.respond(embed=embed)
+
+            return
+
+        mute_role = ctx.guild.get_role(self.cache["muteRole"])
+
+        description = ""
+        for member_id in member_ids:
+            member: discord.Member = await self.guild.get_member(int(member_id))
+
+            if member == None:
+                description += f"The member with ID `{member_id}` was not found.\n"
+                continue
+
+            if mute_role.id not in member.roles:
+                description += f"The member with ID `{member_id}` is not muted.\n"
+                continue
+
+            try:
+                roles = [self.guild.get_role(role.id) for role in member.roles]
+                await member.edit(roles=roles)
+
+                description += f"The member {member.mention} `{member.name}#{member.discriminator}` has been successfully unmuted."
+
                 try:
-                    # incase unmute before auto unmute
-                    self.cache["unmute_queue"].pop(str(members))
+                    self.cache["unmuteQueue"].pop(member_id)
                 except KeyError:
                     pass
-                successful_ids += f"\n{members}"
-            else:
-                failed_ids += f"\n{members}"
+            except Exception as e:
+                description += f"The member {member.mention} `{member.name}#{member.discriminator}` could not be unmuted.\n"
+                continue
+
+            self.cache["unmutes"].setdefault(str(member_id), []).append(
+                {"responsible": ctx.author.id, "reason": reason, "time": datetime.now().timestamp()})
+
+            self.bot.dispatch("member_unmute", ModContext(
+                member=member, moderator=ctx.author, reason=reason, timestamp=datetime.now().timestamp()))
+
         await self.update_db()
-        description = ""
-        if successful_ids:
-            description += f"Successfully unmuted: {successful_ids}\n"
-        if failed_ids:
-            description += f"Users not unmuted: {failed_ids}"
-        if not description:
-            description = f"No users parsed, please mention the user or use their id."
+
         embed = discord.Embed(
-            title="Success", description=description)
+            title="Report", description=description)
         await ctx.respond(embed=embed)
 
     async def _unmute(self, member, time):
@@ -435,151 +528,195 @@ class Moderation(BaseCog):
         else:
             await self._unmute_helper(member)
 
-    def _unmute_after(self, member):  # bruh async stuff
+    def _unmute_after(self, member):
         return self.bot.loop.create_task(self._unmute_helper(member))
 
-    async def _unmute_helper(self, member):
+    async def _unmute_helper(self, member_id):
         try:
-            guild = self.bot.get_guild(self.bot.config["guild_id"])
-            members = guild.get_member(int(member))
-            listRoles = [None] * len(self.cache["mute"][member][-1]["roles"])
-            for idx, r in enumerate(self.cache["mute"][member][-1]["roles"]):
-                listRoles[idx] = guild.get_role(r)
-            await members.edit(roles=listRoles)
-            self.cache["unmute"].setdefault(str(member), []).append(
-                {"responsible": self.bot.application_id, "reason": f"Automated Unmute", "time": datetime.now().timestamp()})
+            member = self.guild.get_member(int(member_id))
+            roles = [self.guild.get_role(
+                role_id) for role_id in self.cache["mutes"][member_id][-1]["roles"]]
+
+            await member.edit(roles=roles)
+
+            self.cache["unmutes"].setdefault(str(member_id), []).append(
+                {"responsible": self.bot.user, "reason": f"Automated unmute", "time": datetime.now().timestamp()})
         except Exception as e:
             self.logger.error(f"{e}")
-        self.cache["unmute_queue"].pop(member)
+
+        self.cache["unmuteQueue"].pop(member_id)
         await self.update_db()
 
-    @commands.slash_command(name="mutes", description="Lists all mutes and unmutes for a member")
+    @commands.slash_command(name="mutes", description="Lists all mutes and unmutes for a member.")
     @checks.has_permissions(PermissionLevel.OWNER)
     async def mutes(self, ctx: ApplicationContext, member: discord.Option(discord.Member, description="The members you want to get mute history.")):
-        """Lists all the mutes and unmutes for a member"""
-        userid = str(member.id)
-        if userid not in self.cache["mute"]:
+        """
+        Lists all the mutes and unmutes for a member
+
+        """
+
+        member_id = str(member.id)
+
+        if member_id not in self.cache["mutes"]:
             embed = discord.Embed(
                 title=f"{member.name} ({member.id})", description="This user has not been muted.")
             await ctx.respond(embed=embed)
             return
-        actionlist = copy.deepcopy(self.cache["mute"][userid])
-        if userid in self.cache["unmute"]:
-            actionlist.extend(self.cache["unmute"][userid])
-        actionlist = sorted(actionlist, key=lambda d: d['time'])
+
+        actions = copy.deepcopy(self.cache["mutes"][member_id])
+        if member_id in self.cache["unmutes"]:
+            actions.extend(self.cache["unmutes"][member_id])
+
+        actions = sorted(actions, key=lambda d: d['time'])
+
         description = ""
-        for action in actionlist:
+        for action in actions:
             if "duration" in action:
-                _moderator = await self.bot.fetch_user(action["responsible"])
-                description += f'**Mute**\n Moderator: {_moderator.mention} ({action["responsible"]}) \n Reason: {action["reason"]} \n Duration: {action["duration"]} \n Date: <t:{round(action["time"])}:F> \n\n'
+                moderator = await self.bot.fetch_user(action["responsible"])
+                description += f'**Mute**\n Moderator: {moderator.mention} ({action["responsible"]}) \n Reason: {action["reason"]} \n Duration: {action["duration"]} \n Date: <t:{round(action["time"])}:F> \n\n'
             else:
-                _moderator = await self.bot.fetch_user(action["responsible"])
-                description += f'**Unmute**\n Moderator: {_moderator.mention} ({action["responsible"]}) \n Reason: {action["reason"]} \n Date: <t:{round(action["time"])}:F> \n\n'
+                moderator = await self.bot.fetch_user(action["responsible"])
+                description += f'**Unmute**\n Moderator: {moderator.mention} ({action["responsible"]}) \n Reason: {action["reason"]} \n Date: <t:{round(action["time"])}:F> \n\n'
+
         if not description:
             description = "This user has not been muted."
+
         embed = discord.Embed(
             title=f"{member.name} ({member.id})", description=description)
         await ctx.respond(embed=embed)
+
 #----------------------------------------Warn----------------------------------------#
 
-    @commands.slash_command(name="warn", description="Warns a member")
+    @commands.slash_command(name="warn", description="Warns a member.")
     @checks.has_permissions(PermissionLevel.OWNER)
-    async def warn(self, ctx: ApplicationContext, memberlist: discord.Option(str, description="The members you want to warn."),
-                   reason: discord.Option(str, description="Warn reason.")):
+    async def warn(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to warn."),
+                   reason: discord.Option(str, description="Warn reason.", default="")):
         """
         Warns a member via /warn [members] [reason]
 
         """
-        memberlist = re.sub("[^0-9 ]", " ", memberlist)
-        member = memberlist.split()
-        successful_ids = ""
-        failed_ids = ""
-        for members in member:
+
+        member_ids = self.get_member_ids(members)
+
+        if len(member_ids) == 0:
+            embed = discord.Embed(
+                title="Error", description="No valid member IDs provided.")
+            await ctx.respond(embed=embed)
+
+            return
+
+        description = ""
+        for member_id in member_ids:
+            member: discord.Member = await self.bot.fetch_user(int(member_id))
+
+            if member == None:
+                description += f"The member with ID `{member_id}` was not found.\n"
+                continue
+
+            description += f"The member {member.mention} `{member.name}#{member.discriminator}` has been successfully warned, "
+
             try:
-                _member = await self.bot.fetch_user(members)
-                await _member.send(f"You have been warned in {ctx.guild.name}. Reason: {reason}")
-                successful_ids += f"\n {members}"
-                self.cache["warn"].setdefault(str(members), []).append(
-                    {"responsible": ctx.author.id, "reason": reason, "time": datetime.now().timestamp(), "id": self.cache["warnid"]})
+                await member.send(f"You have been warned in {self.guild.name}. Reason: {reason}")
+                description += "and a message has been sent.\n"
+            except:
+                self.logger.error(f"Could not message {member.name}.")
+                description += "but a message could not be sent.\n"
 
-                self.bot.dispatch("member_warn", Context(member=members, moderator=ctx.author.id, reason=reason, timestamp=datetime.now().timestamp(), id=self.cache["warnid"]))
+            self.cache["warns"].setdefault(str(member_id), []).append(
+                {"responsible": ctx.author.id, "reason": reason, "time": datetime.now().timestamp()})
 
-                self.cache["warnid"] += 1
-
-            except Exception as e:
-                print(e)
-                failed_ids += f"\n {members}"
+            self.bot.dispatch("member_warn", ModContext(member=member, moderator=ctx.author,
+                              reason=reason, timestamp=datetime.now().timestamp()))
 
         await self.update_db()
-        description = ""
-        if successful_ids:
-            description += f"Succesfully warned: {successful_ids}.\n"
-        if failed_ids:
-            description += f"Could not message: {failed_ids}"
-        if not description:
-            description = f"No users parsed, please mention the user or use their id."
+
         embed = discord.Embed(
-            title="Success", description=description)
+            title="Report", description=description)
         await ctx.respond(embed=embed)
 
     @commands.slash_command(name="pardon", description="Pardons a warn")
     @checks.has_permissions(PermissionLevel.OWNER)
-    async def pardon(self, ctx: ApplicationContext, warnid: discord.Option(int, description="Warn ID to pardon.")):
-        user = None
-        idx = None
-        for key, value in self.cache["warn"].items():
-            left = 0
-            right = len(value)-1
-            index = None
-            while left <= right:
-                mid = floor((left+right)/2)
-                if value[mid]["id"] == warnid:
-                    index = mid
-                    break
-                elif value[mid]["id"] < warnid:
-                    left = mid + 1
-                else:
-                    right = mid-1
-            else:
-                continue
-            user = key
-            idx = index
-            break
-        embed = None
-        if user:
-            self.cache["pardon"].setdefault(user, []).append(
-                self.cache["warn"][user][idx])
-            self.cache["pardon"][user][-1]["pardoned_by"] = ctx.author.id
-            self.cache["pardon"][user][-1]["pardon_time"] = datetime.now().timestamp()
-            self.cache["warn"][user].pop(idx)
-            await self.update_db()
+    async def pardon(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to pardon warns for.")):
+        """
+        Pardons warns for some members via /pardon [members]
 
-            self.bot.dispatch("member_pardon", Context(member=user, moderator=ctx.author.id, timestamp=datetime.now().timestamp(), id=self.cache["pardon"][user][-1]["id"]))
+        """
 
+        member_ids = self.get_member_ids(members)
+
+        if len(member_ids) == 0:
             embed = discord.Embed(
-                title="Success", description=f"Successfully pardoned warn of id {warnid}")
-        else:
-            embed = discord.Embed(
-                title="Error", description="Invalid id, no warning found.")
+                title="Error", description="No valid member IDs provided.")
+            await ctx.respond(embed=embed)
 
+            return
+
+        def _warns_callback(interaction: Interaction):
+            warn_select.values.sort(reverse=True)
+            for value in warn_select.values:
+                self.cache["warns"][str(member_id)].pop(int(value))
+
+            self.cache["pardons"].setdefault(str(member_id), []).append(
+                {"responsible": ctx.author.id, "time": datetime.now().timestamp()})
+
+            self.bot.dispatch("member_pardon", ModContext(
+                member=member, moderator=ctx.author, timestamp=datetime.now().timestamp()))
+
+            warn_view.stop()
+
+        embed = discord.Embed(
+            title="Warns", description="Fetching warns...")
         await ctx.respond(embed=embed)
 
-    @commands.slash_command(name="warns", description="Lists all warns for a member")
+        for member_id in member_ids:
+            member: discord.User = await self.bot.fetch_user(int(member_id))
+
+            if member == None or len(self.cache["warns"][str(member_id)]) == 0:
+                continue
+
+            warn_select = Select(placeholder="Select warns", max_values=len(self.cache["warns"][str(member_id)]),
+                                 options=[discord.SelectOption(label=count+1, value=count) for count in range[0, len(self.cache["warns"][str(member_id)])]])
+            warn_select.callback = _warns_callback
+
+            warn_view = View(warn_select)
+
+            embed.description = f"**{member.name}#{member.discriminator}**\n"
+            embed.description += "".join([f"Responsible: <@{warn['responsible']}> Reason: {warn['reason'] if not '' else 'No reason given'}"
+                                          for warn in self.cache["warns"][str(member_id)]])
+
+            await ctx.response.edit_message(embed=embed, view=warn_view)
+
+            await warn_view.wait()
+
+        await self.update_db()
+
+        await ctx.delete()
+
+    @commands.slash_command(name="warns", description="Lists all warns for a member.")
     @checks.has_permissions(PermissionLevel.OWNER)
-    async def warns(self, ctx: ApplicationContext, member: discord.Option(discord.Member, description="The members you want to get warns.")):
-        """Lists all the warns for a member"""
-        userid = str(member.id)
-        if userid not in self.cache["warn"]:
+    async def warns(self, ctx: ApplicationContext, member: discord.Option(discord.Member, description="The members you want to get warns for.")):
+        """
+        Lists all the warns for a member
+        
+        """
+
+        member_id = str(member.id)
+
+        if member_id not in self.cache["warns"]:
             embed = discord.Embed(
                 title=f"{member.name} ({member.id})", description="This user has no warns")
             await ctx.respond(embed=embed)
+
             return
-        actionlist = copy.deepcopy(self.cache["warn"][userid])
-        if userid in self.cache["pardon"]:
-            actionlist.extend(self.cache["pardon"][userid])
-        actionlist = sorted(actionlist, key=lambda d: d['time'])
+
+        actions = copy.deepcopy(self.cache["warns"][member_id])
+        if member_id in self.cache["pardons"]:
+            actions.extend(self.cache["pardons"][member_id])
+
+        actions = sorted(actions, key=lambda d: d['time'])
+
         description = ""
-        for action in actionlist:
+        for action in actions:
             if "pardoned_by" in action:
                 _moderator = await self.bot.fetch_user(action["responsible"])
                 _pardon_mod = await self.bot.fetch_user(action["pardoned_by"])
@@ -587,104 +724,139 @@ class Moderation(BaseCog):
             else:
                 _moderator = await self.bot.fetch_user(action["responsible"])
                 description += f'**Warn id: {action["id"]}**\n Moderator: {_moderator.mention} ({action["responsible"]}) \n Reason: {action["reason"]} \n Date: <t:{round(action["time"])}:F> \n\n'
+
         if not description:
             description = "This user has no warns."
+
         embed = discord.Embed(
             title=f"{member.name} ({member.id})", description=description)
         await ctx.respond(embed=embed)
 
-
 #----------------------------------------Note----------------------------------------#
-
 
     @commands.slash_command(name="note", description="Write a note about a member")
     @checks.has_permissions(PermissionLevel.OWNER)
-    async def note(self, ctx: ApplicationContext, memberlist: discord.Option(str, description="The members you want to write a note about."),
+    async def note(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to write a note about."),
                    note: discord.Option(str, description="Note")):
         """
         Writes a note about a member member via /note [members] [note]
 
         """
-        memberlist = re.sub("[^0-9 ]", " ", memberlist)
-        member = memberlist.split()
-        ids = ""
-        for members in member:
-            ids += f"\n{members}"
-            self.cache["note"].setdefault(str(members), []).append(
-                {"responsible": ctx.author.id, "note": note, "time": datetime.now().timestamp(), "id": self.cache["noteid"]})
-            self.cache["noteid"] += 1
+
+        member_ids = self.get_member_ids(members)
+
+        if len(member_ids) == 0:
+            embed = discord.Embed(
+                title="Error", description="No valid member IDs provided.")
+            await ctx.respond(embed=embed)
+
+            return
+
+        description = ""
+        for member_id in member_ids:
+            member: discord.Member = await self.bot.fetch_user(int(member_id))
+
+            if member == None:
+                description += f"The member with ID `{member_id}` was not found.\n"
+                continue
+
+            description += f"The member {member.mention} `{member.name}#{member.discriminator}` got a note written about them."
+
+            self.cache["notes"].setdefault(str(members), []).append(
+                {"responsible": ctx.author.id, "note": note, "time": datetime.now().timestamp()})
 
         await self.update_db()
-        description = ""
-        if ids:
-            description = f"Successfully wrote a note for: {ids}"
-        else:
-            description = f"No users parsed, please mention the user or use their id."
 
         embed = discord.Embed(
-            title="Success", description=description)
+            title="Report", description=description)
         await ctx.respond(embed=embed)
 
-    delete = SlashCommandGroup("delete", "Manages notes")
-
-    @delete.command(name="note", description="Deletes a note")
+    @commands.slash_command(name="omit", description="Deletes a note")
     @checks.has_permissions(PermissionLevel.OWNER)
-    async def remove_note(self, ctx: ApplicationContext, noteid: discord.Option(int, description="note ID to remove.")):
-        user = None
-        idx = None
-        for key, value in self.cache["note"].items():
-            left = 0
-            right = len(value)-1
-            index = None
-            while left <= right:
-                mid = floor((left+right)/2)
-                if value[mid]["id"] == noteid:
-                    index = mid
-                    break
-                elif value[mid]["id"] < noteid:
-                    left = mid + 1
-                else:
-                    right = mid-1
-            else:
-                continue
-            user = key
-            idx = index
-            break
-        embed = None
-        if user:
-            self.cache["note"][user].pop(idx)
-            await self.update_db()
-            embed = discord.Embed(
-                title="Success", description=f"Successfully delete note of id {noteid}")
-        else:
-            embed = discord.Embed(
-                title="Error", description="Invalid id, no note found.")
+    async def remove_note(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to omit notes for.")):
+        """
+        Omits notes for some members via /omit [members]
 
+        """
+        
+        member_ids = self.get_member_ids(members)
+
+        if len(member_ids) == 0:
+            embed = discord.Embed(
+                title="Error", description="No valid member IDs provided.")
+            await ctx.respond(embed=embed)
+
+            return
+
+        def _notes_callback(interaction: Interaction):
+            note_select.values.sort(reverse=True)
+            for value in note_select.values:
+                self.cache["notes"][str(member_id)].pop(int(value))
+
+            note_view.stop()
+
+        embed = discord.Embed(
+            title="Notes", description="Fetching notes...")
         await ctx.respond(embed=embed)
+
+        for member_id in member_ids:
+            member: discord.User = await self.bot.fetch_user(int(member_id))
+
+            if member == None or len(self.cache["notes"][str(member_id)]) == 0:
+                continue
+
+            note_select = Select(placeholder="Select notes", max_values=len(self.cache["notes"][str(member_id)]),
+                                 options=[discord.SelectOption(label=count+1, value=count) for count in range[0, len(self.cache["notes"][str(member_id)])]])
+            note_select.callback = _notes_callback
+
+            note_view = View(note_select)
+
+            embed.description = f"**{member.name}#{member.discriminator}**\n"
+            embed.description += "".join([f"Responsible: <@{note['responsible']}> Note: {note['note']}"
+                                          for note in self.cache["notes"][str(member_id)]])
+
+            await ctx.response.edit_message(embed=embed, view=note_view)
+
+            await note_view.wait()
+
+        await self.update_db()
+        
+        await ctx.delete()
 
     @commands.slash_command(name="notes", description="Lists all notes for a member")
     @checks.has_permissions(PermissionLevel.OWNER)
     async def notes(self, ctx: ApplicationContext, member: discord.Option(discord.Member, description="The members you want to get notes.")):
-        """Lists all the notes for a member"""
-        userid = str(member.id)
-        if userid not in self.cache["note"]:
+        """
+        Lists all the notes for a member
+        
+        """
+
+        member_id = str(member.id)
+
+        if member_id not in self.cache["notes"]:
             embed = discord.Embed(
                 title=f"{member.name} ({member.id})", description="This user has no notes")
             await ctx.respond(embed=embed)
+
             return
-        actionlist = copy.deepcopy(self.cache["note"][userid])
-        actionlist = sorted(actionlist, key=lambda d: d['time'])
+
+        actions = copy.deepcopy(self.cache["notes"][member_id])
+        actions = sorted(actions, key=lambda d: d['time'])
+
         description = ""
-        for action in actionlist:
+        for action in actions:
             _moderator = await self.bot.fetch_user(action["responsible"])
-            description += f'**Note id: {action["id"]}**\n Moderator: {_moderator.mention} ({action["responsible"]}) \n Note: {action["note"]} \n Date: <t:{round(action["time"])}:F> \n\n'
+            description += f'**Note id: {action["id"]}**\n Moderator: {_moderator.mention} ({action["responsible"]}) \n Note: {action["notes"]} \n Date: <t:{round(action["time"])}:F> \n\n'
+
         if not description:
             description = "This user has no notes."
+            
         embed = discord.Embed(
             title=f"{member.name} ({member.id})", description=description)
         await ctx.respond(embed=embed)
 
 #--------------------------------------------------------------------------------#
+
     @commands.slash_command(name="slowmode", description="Sets slowmode for a channel.")
     @checks.has_permissions(PermissionLevel.OWNER)
     async def slowmode(self, ctx: ApplicationContext, channel: discord.Option(discord.TextChannel, description="The channel you want to set slowmode.", default=None), time: discord.Option(str, description="The slowmode time.", default="0s")):
