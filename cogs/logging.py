@@ -51,12 +51,12 @@ class Logging(BaseCog):
             if self.cache["logChannel"] == None:
                 return
 
-            chn = self.guild.get_channel(self.cache["logChannel"])
+            chn = await self.guild.fetch_channel(self.cache["logChannel"])
             await chn.send(embed=embed)
 
             return
 
-        chn = self.guild.get_channel(self.cache["modChannel"])
+        chn = await self.guild.fetch_channel(self.cache["modChannel"])
         await chn.send(embed=embed)
 
     @commands.Cog.listener()
@@ -75,12 +75,12 @@ class Logging(BaseCog):
             if self.cache["logChannel"] == None:
                 return
 
-            chn = self.guild.get_channel(self.cache["logChannel"])
+            chn = await self.guild.fetch_channel(self.cache["logChannel"])
             await chn.send(embed=embed)
 
             return
 
-        chn = self.guild.get_channel(self.cache["modChannel"])
+        chn = await self.guild.fetch_channel(self.cache["modChannel"])
         await chn.send(embed=embed)
 
     @commands.Cog.listener()
@@ -102,12 +102,12 @@ class Logging(BaseCog):
             if self.cache["logChannel"] == None:
                 return
 
-            chn = self.guild.get_channel(self.cache["logChannel"])
+            chn = await self.guild.fetch_channel(self.cache["logChannel"])
             await chn.send(embed=embed)
 
             return
 
-        chn = self.guild.get_channel(self.cache["modChannel"])
+        chn = await self.guild.fetch_channel(self.cache["modChannel"])
         await chn.send(embed=embed)
 
     @commands.Cog.listener()
@@ -129,12 +129,12 @@ class Logging(BaseCog):
             if self.cache["logChannel"] == None:
                 return
 
-            chn = self.guild.get_channel(self.cache["logChannel"])
+            chn = await self.guild.fetch_channel(self.cache["logChannel"])
             await chn.send(embed=embed)
 
             return
 
-        chn = self.guild.get_channel(self.cache["modChannel"])
+        chn = await self.guild.fetch_channel(self.cache["modChannel"])
         await chn.send(embed=embed)
 
     @commands.Cog.listener()
@@ -153,12 +153,12 @@ class Logging(BaseCog):
             if self.cache["logChannel"] == None:
                 return
 
-            chn = self.guild.get_channel(self.cache["logChannel"])
+            chn = await self.guild.fetch_channel(self.cache["logChannel"])
             await chn.send(embed=embed)
 
             return
 
-        chn = self.guild.get_channel(self.cache["modChannel"])
+        chn = await self.guild.fetch_channel(self.cache["modChannel"])
         await chn.send(embed=embed)
 
     @commands.Cog.listener()
@@ -181,12 +181,12 @@ class Logging(BaseCog):
             if self.cache["logChannel"] == None:
                 return
 
-            chn = self.guild.get_channel(self.cache["logChannel"])
+            chn = await self.guild.fetch_channel(self.cache["logChannel"])
             await chn.send(embed=embed)
 
             return
 
-        chn = self.guild.get_channel(self.cache["modChannel"])
+        chn = await self.guild.fetch_channel(self.cache["modChannel"])
         await chn.send(embed=embed)
 
     @commands.Cog.listener()
@@ -205,12 +205,12 @@ class Logging(BaseCog):
             if self.cache["logChannel"] == None:
                 return
 
-            chn = self.guild.get_channel(self.cache["logChannel"])
+            chn = await self.guild.fetch_channel(self.cache["logChannel"])
             await chn.send(embed=embed)
 
             return
 
-        chn = self.guild.get_channel(self.cache["modChannel"])
+        chn = await self.guild.fetch_channel(self.cache["modChannel"])
         await chn.send(embed=embed)
 
 #----------------------------------------message logs----------------------------------------#
@@ -238,12 +238,12 @@ class Logging(BaseCog):
             if self.cache["logChannel"] == None:
                 return
 
-            chn = self.guild.get_channel(self.cache["logChannel"])
+            chn = await self.guild.fetch_channel(self.cache["logChannel"])
             await chn.send(embed=embed)
 
             return
 
-        chn = self.guild.get_channel(self.cache["msgChannel"])
+        chn = await self.guild.fetch_channel(self.cache["msgChannel"])
         await chn.send(embed=embed)
 
     @ commands.Cog.listener()
@@ -265,12 +265,12 @@ class Logging(BaseCog):
             if self.cache["logChannel"] == None:
                 return
 
-            chn = self.guild.get_channel(self.cache["logChannel"])
+            chn = await self.guild.fetch_channel(self.cache["logChannel"])
             await chn.send(embed=embed)
 
             return
 
-        chn = self.guild.get_channel(self.cache["msgChannel"])
+        chn = await self.guild.fetch_channel(self.cache["msgChannel"])
         await chn.send(embed=embed)
 
 #-----------------------------------------server logs----------------------------------------#
@@ -297,12 +297,12 @@ class Logging(BaseCog):
             if self.cache["logChannel"] == None:
                 return
 
-            chn = self.guild.get_channel(self.cache["logChannel"])
+            chn = await self.guild.fetch_channel(self.cache["logChannel"])
             await chn.send(embed=embed)
 
             return
 
-        chn = self.guild.get_channel(self.cache["srvChannel"])
+        chn = await self.guild.fetch_channel(self.cache["srvChannel"])
         await chn.send(embed=embed)
 
     @commands.Cog.listener()
@@ -318,12 +318,12 @@ class Logging(BaseCog):
             if self.cache["logChannel"] == None:
                 return
 
-            chn = self.guild.get_channel(self.cache["logChannel"])
+            chn = await self.guild.fetch_channel(self.cache["logChannel"])
             await chn.send(embed=embed)
 
             return
 
-        chn = self.guild.get_channel(self.cache["srvChannel"])
+        chn = await self.guild.fetch_channel(self.cache["srvChannel"])
         await chn.send(embed=embed)
 
     @commands.Cog.listener()
@@ -371,12 +371,12 @@ class Logging(BaseCog):
             if self.cache["logChannel"] == None:
                 return
 
-            chn = self.guild.get_channel(self.cache["logChannel"])
+            chn = await self.guild.fetch_channel(self.cache["logChannel"])
             await chn.send(embed=embed)
 
             return
 
-        chn = self.guild.get_channel(self.cache["srvChannel"])
+        chn = await self.guild.fetch_channel(self.cache["srvChannel"])
 
         if len(embed.fields) > 0:
             await chn.send(embed=embed)
@@ -394,12 +394,12 @@ class Logging(BaseCog):
             if self.cache["logChannel"] == None:
                 return
 
-            chn = self.guild.get_channel(self.cache["logChannel"])
+            chn = await self.guild.fetch_channel(self.cache["logChannel"])
             await chn.send(embed=embed)
 
             return
 
-        chn = self.guild.get_channel(self.cache["srvChannel"])
+        chn = await self.guild.fetch_channel(self.cache["srvChannel"])
         await chn.send(embed=embed)
 
     @commands.Cog.listener()
@@ -415,12 +415,12 @@ class Logging(BaseCog):
             if self.cache["logChannel"] == None:
                 return
 
-            chn = self.guild.get_channel(self.cache["logChannel"])
+            chn = await self.guild.fetch_channel(self.cache["logChannel"])
             await chn.send(embed=embed)
 
             return
 
-        chn = self.guild.get_channel(self.cache["srvChannel"])
+        chn = await self.guild.fetch_channel(self.cache["srvChannel"])
         await chn.send(embed=embed)
 
     @commands.Cog.listener()
@@ -464,12 +464,12 @@ class Logging(BaseCog):
             if self.cache["logChannel"] == None:
                 return
 
-            chn = self.guild.get_channel(self.cache["logChannel"])
+            chn = await self.guild.fetch_channel(self.cache["logChannel"])
             await chn.send(embed=embed)
 
             return
 
-        chn = self.guild.get_channel(self.cache["srvChannel"])
+        chn = await self.guild.fetch_channel(self.cache["srvChannel"])
 
         if len(embed.fields) > 0 or len(embed.fields) == 1 and before.position == after.position:
             await chn.send(embed=embed)
@@ -496,12 +496,12 @@ class Logging(BaseCog):
             if self.cache["logChannel"] == None:
                 return
 
-            chn = self.guild.get_channel(self.cache["logChannel"])
+            chn = await self.guild.fetch_channel(self.cache["logChannel"])
             await chn.send(embed=embed)
 
             return
 
-        chn = self.guild.get_channel(self.cache["jlvChannel"])
+        chn = await self.guild.fetch_channel(self.cache["jlvChannel"])
         await chn.send(embed=embed)
 
     @commands.Cog.listener()
@@ -521,12 +521,12 @@ class Logging(BaseCog):
             if self.cache["logChannel"] == None:
                 return
 
-            chn = self.guild.get_channel(self.cache["logChannel"])
+            chn = await self.guild.fetch_channel(self.cache["logChannel"])
             await chn.send(embed=embed)
 
             return
 
-        chn = self.guild.get_channel(self.cache["jlvChannel"])
+        chn = await self.guild.fetch_channel(self.cache["jlvChannel"])
         await chn.send(embed=embed)
 
 #-----------------------------------------member logs----------------------------------------#
@@ -574,12 +574,12 @@ class Logging(BaseCog):
             if self.cache["logChannel"] == None:
                 return
 
-            chn = self.guild.get_channel(self.cache["logChannel"])
+            chn = await self.guild.fetch_channel(self.cache["logChannel"])
             await chn.send(embed=embed)
 
             return
 
-        chn = self.guild.get_channel(self.cache["mbrChannel"])
+        chn = await self.guild.fetch_channel(self.cache["mbrChannel"])
 
         if len(embed.fields) > 0:
             await chn.send(embed=embed)
@@ -617,12 +617,12 @@ class Logging(BaseCog):
             if self.cache["logChannel"] == None:
                 return
 
-            chn = self.guild.get_channel(self.cache["logChannel"])
+            chn = await self.guild.fetch_channel(self.cache["logChannel"])
             await chn.send(embed=embed)
 
             return
 
-        chn = self.guild.get_channel(self.cache["mbrChannel"])
+        chn = await self.guild.fetch_channel(self.cache["mbrChannel"])
 
         await chn.send(embed=embed)
 
@@ -647,12 +647,12 @@ class Logging(BaseCog):
             if self.cache["logChannel"] == None:
                 return
 
-            chn = self.guild.get_channel(self.cache["logChannel"])
+            chn = await self.guild.fetch_channel(self.cache["logChannel"])
             await chn.send(embed=embed)
 
             return
 
-        chn = self.guild.get_channel(self.cache["errChannel"])
+        chn = await self.guild.fetch_channel(self.cache["errChannel"])
 
         await chn.send(embed=embed)
 
@@ -671,16 +671,16 @@ class Logging(BaseCog):
             if self.cache["logChannel"] == None:
                 return
 
-            chn = self.guild.get_channel(self.cache["logChannel"])
+            chn = await self.guild.fetch_channel(self.cache["logChannel"])
             await chn.send(embed=embed)
 
             return
 
-        chn = self.guild.get_channel(self.cache["errChannel"])
+        chn = await self.guild.fetch_channel(self.cache["errChannel"])
 
         await chn.send(embed=embed)
 
-    @ _lg.command(name="set", description="Sets a log channel.")
+    @ _lg.command(name="set", description="Sets a logs channel.")
     @ checks.has_permissions(PermissionLevel.ADMINISTRATOR)
     async def _lg_set(self, ctx: ApplicationContext, log_channel: discord.Option(str, "The channel you want to set. Log channel is the default if none is set.",
                       choices=[OptionChoice("Logs channel", "logChannel"), OptionChoice("Moderation logs channel", "modChannel"), OptionChoice("Message logs channel", "msgChannel"),
@@ -712,7 +712,7 @@ class Logging(BaseCog):
             title="Success", description=f"Set {channel_names[log_channel]}logs channel as {channel.mention}.")
         await ctx.respond(embed=embed)
 
-    @ _lg.command(name="clear", description="Clears a log channel.")
+    @ _lg.command(name="clear", description="Clears a logs channel.")
     @ checks.has_permissions(PermissionLevel.ADMINISTRATOR)
     async def _lg_clear(self, ctx: ApplicationContext, log_channel: discord.Option(str, "The channel you want to clear.",
                         choices=[OptionChoice("Logs channel", "logChannel"), OptionChoice("Moderation logs channel", "modChannel"), OptionChoice("Message logs channel", "msgChannel"),
@@ -738,6 +738,30 @@ class Logging(BaseCog):
 
         embed = discord.Embed(
             title="Success", description=f"Cleared {channel_names[log_channel]}logs channel.")
+        await ctx.respond(embed=embed)
+
+    @ _lg.command(name="list", description="Lists the logs channels.")
+    @ checks.has_permissions(PermissionLevel.ADMINISTRATOR)
+    async def _lg_list(self, ctx: ApplicationContext):
+        channel_names = {
+            "logChannel": "All ",
+            "modChannel": "Moderation ",
+            "msgChannel": "Message ",
+            "srvChannel": "Server ",
+            "jlvChannel": "Join/Leave ",
+            "mbrChannel": "Member ",
+            "errChannel": "Error "
+        }
+
+        embed = discord.Embed(title="Logs channels")
+
+        for channel in self.cache:
+            if channel == "_id":
+                continue
+
+            embed.add_field(name=f"{channel_names[channel]} logs channel",
+                            value=f"<#{self.cache[channel]}>" if self.cache[channel] != None else "No channel set.", inline=False)
+
         await ctx.respond(embed=embed)
 
 
