@@ -5,18 +5,16 @@ import time
 import discord
 from discord.ext import commands
 
-from discord import ApplicationContext, CategoryChannel, ChannelType, Colour, EmbedField, ForumChannel, Interaction, OptionChoice, Permissions, SlashCommandGroup, StageChannel, TextChannel, VoiceChannel
+from discord import ApplicationContext, CategoryChannel, ChannelType, Colour, Embed, EmbedField, ForumChannel, Interaction, OptionChoice, Permissions, SlashCommandGroup, StageChannel, TextChannel, VoiceChannel
 
 from core import checks
-from core import listener
+from core import context
 from core.base_cog import BaseCog
 from core.checks import PermissionLevel
 from core import logger
 
 
-
-
-class Logging(BaseCog): 
+class Logging(BaseCog):
     _id = "logging"
 
     default_cache = {
@@ -31,38 +29,189 @@ class Logging(BaseCog):
 
     _lg = SlashCommandGroup("log", "Contains all the commands for logging.")
 
-    def __init__(self, bot) -> None:
-        super().__init__(bot)
-
 #--------------------------------------moderation logs---------------------------------------#
 
     @commands.Cog.listener()
     async def on_member_ban(self, ctx):
-        pass
-    
+        embed = Embed(title="Member banned",
+                      timestamp=ctx.timestamp, colour=Colour.red)
+
+        embed.add_field(name="Member banned",
+                        value=f"{ctx.member.name}#{ctx.member.discriminator}")
+        embed.add_field(name="Banned by", value=f"{ctx.moderator.mention}")
+
+        if ctx.duration:
+            embed.add_field(name="Duration",
+                            value=f"Until <t:{int(ctx.duration)}:F>")
+
+        if ctx.reason:
+            embed.add_field(name="Reason", value=ctx.reason)
+
+        if self.cache["modChannel"] == None:
+            if self.cache["logChannel"] == None:
+                return
+
+            chn = self.guild.get_channel(self.cache["logChannel"])
+            await chn.send(embed=embed)
+
+            return
+
+        chn = self.guild.get_channel(self.cache["modChannel"])
+        await chn.send(embed=embed)
+
+    @commands.Cog.listener()
+    async def on_member_unban(self, ctx):
+        embed = Embed(title="Member unbanned",
+                      timestamp=ctx.timestamp, colour=Colour.green)
+
+        embed.add_field(name="Member unbanned",
+                        value=f"{ctx.member.name}#{ctx.member.discriminator}")
+        embed.add_field(name="Unbanned by", value=f"{ctx.moderator.mention}")
+
+        if ctx.reason:
+            embed.add_field(name="Reason", value=ctx.reason)
+
+        if self.cache["modChannel"] == None:
+            if self.cache["logChannel"] == None:
+                return
+
+            chn = self.guild.get_channel(self.cache["logChannel"])
+            await chn.send(embed=embed)
+
+            return
+
+        chn = self.guild.get_channel(self.cache["modChannel"])
+        await chn.send(embed=embed)
+
     @commands.Cog.listener()
     async def on_member_warn(self, ctx):
-        print(vars(ctx))
+        embed = Embed(title="Member warned",
+                      timestamp=ctx.timestamp, colour=Colour.red)
+
+        embed.add_field(name="Member warned",
+                        value=f"{ctx.member.name}#{ctx.member.discriminator}")
+        embed.add_field(name="Warned by", value=f"{ctx.moderator.mention}")
+
+        if ctx.reason:
+            embed.add_field(name="Reason", value=ctx.reason)
+
+        if ctx.id:
+            embed.add_field(name="Warn ID", value=ctx.id)
+
+        if self.cache["modChannel"] == None:
+            if self.cache["logChannel"] == None:
+                return
+
+            chn = self.guild.get_channel(self.cache["logChannel"])
+            await chn.send(embed=embed)
+
+            return
+
+        chn = self.guild.get_channel(self.cache["modChannel"])
+        await chn.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_member_pardon(self, ctx):
-        pass
-    
-    @commands.Cog.listener()
-    async def on_member_unban(self, ctx):
-        pass
-    
+        embed = Embed(title="Member pardoned",
+                      timestamp=ctx.timestamp, colour=Colour.green)
+
+        embed.add_field(name="Member pardoned",
+                        value=f"{ctx.member.name}#{ctx.member.discriminator}")
+        embed.add_field(name="Pardoned by", value=f"{ctx.moderator.mention}")
+
+        if ctx.reason:
+            embed.add_field(name="Reason", value=ctx.reason)
+
+        if ctx.id:
+            embed.add_field(name="Warn ID", value=ctx.id)
+
+        if self.cache["modChannel"] == None:
+            if self.cache["logChannel"] == None:
+                return
+
+            chn = self.guild.get_channel(self.cache["logChannel"])
+            await chn.send(embed=embed)
+
+            return
+
+        chn = self.guild.get_channel(self.cache["modChannel"])
+        await chn.send(embed=embed)
+
     @commands.Cog.listener()
     async def on_member_kick(self, ctx):
-        pass
+        embed = Embed(title="Member kicked",
+                      timestamp=ctx.timestamp, colour=Colour.red)
+
+        embed.add_field(name="Member kicked",
+                        value=f"{ctx.member.name}#{ctx.member.discriminator}")
+        embed.add_field(name="Kicked by", value=f"{ctx.moderator.mention}")
+
+        if ctx.reason:
+            embed.add_field(name="Reason", value=ctx.reason)
+
+        if self.cache["modChannel"] == None:
+            if self.cache["logChannel"] == None:
+                return
+
+            chn = self.guild.get_channel(self.cache["logChannel"])
+            await chn.send(embed=embed)
+
+            return
+
+        chn = self.guild.get_channel(self.cache["modChannel"])
+        await chn.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_member_mute(self, ctx):
-        pass
-    
+        embed = Embed(title="Member muted",
+                      timestamp=ctx.timestamp, colour=Colour.red)
+
+        embed.add_field(name="Member muted",
+                        value=f"{ctx.member.name}#{ctx.member.discriminator}")
+        embed.add_field(name="Muted by", value=f"{ctx.moderator.mention}")
+
+        if ctx.duration:
+            embed.add_field(name="Duration",
+                            value=f"Until <t:{int(ctx.duration)}:F>")
+
+        if ctx.reason:
+            embed.add_field(name="Reason", value=ctx.reason)
+
+        if self.cache["modChannel"] == None:
+            if self.cache["logChannel"] == None:
+                return
+
+            chn = self.guild.get_channel(self.cache["logChannel"])
+            await chn.send(embed=embed)
+
+            return
+
+        chn = self.guild.get_channel(self.cache["modChannel"])
+        await chn.send(embed=embed)
+
     @commands.Cog.listener()
     async def on_member_unmute(self, ctx):
-        pass
+        embed = Embed(title="Member unmuted",
+                      timestamp=ctx.timestamp, colour=Colour.green)
+
+        embed.add_field(name="Member unmuted",
+                        value=f"{ctx.member.name}#{ctx.member.discriminator}")
+        embed.add_field(name="Unmuted by", value=f"{ctx.moderator.mention}")
+
+        if ctx.reason:
+            embed.add_field(name="Reason", value=ctx.reason)
+
+        if self.cache["modChannel"] == None:
+            if self.cache["logChannel"] == None:
+                return
+
+            chn = self.guild.get_channel(self.cache["logChannel"])
+            await chn.send(embed=embed)
+
+            return
+
+        chn = self.guild.get_channel(self.cache["modChannel"])
+        await chn.send(embed=embed)
 
 #----------------------------------------message logs----------------------------------------#
 
@@ -70,8 +219,6 @@ class Logging(BaseCog):
     async def on_message_delete(self, message: discord.Message):
         if message.author.bot:
             return
-
-        guild = self.bot.get_guild(self.bot.config["guild_id"])
 
         embed = discord.Embed(title=f"Message deleted in #{message.channel.name}",
                               description=message.content, timestamp=message.created_at, colour=Colour.red())
@@ -91,12 +238,12 @@ class Logging(BaseCog):
             if self.cache["logChannel"] == None:
                 return
 
-            chn = guild.get_channel(self.cache["logChannel"])
+            chn = self.guild.get_channel(self.cache["logChannel"])
             await chn.send(embed=embed)
 
             return
 
-        chn = guild.get_channel(self.cache["msgChannel"])
+        chn = self.guild.get_channel(self.cache["msgChannel"])
         await chn.send(embed=embed)
 
     @ commands.Cog.listener()
@@ -106,8 +253,6 @@ class Logging(BaseCog):
 
         if before.content == after.content:
             return
-
-        guild = self.bot.get_guild(self.bot.config["guild_id"])
 
         embed = discord.Embed(title=f"Message edited in #{before.channel.name}",
                               description=f"**Before:** {before.content}\n**After:** {after.content}\n", timestamp=after.edited_at, colour=Colour.blue())
@@ -120,19 +265,18 @@ class Logging(BaseCog):
             if self.cache["logChannel"] == None:
                 return
 
-            chn = guild.get_channel(self.cache["logChannel"])
+            chn = self.guild.get_channel(self.cache["logChannel"])
             await chn.send(embed=embed)
 
             return
 
-        chn = guild.get_channel(self.cache["msgChannel"])
+        chn = self.guild.get_channel(self.cache["msgChannel"])
         await chn.send(embed=embed)
 
 #-----------------------------------------server logs----------------------------------------#
 
     @commands.Cog.listener()
     async def on_guild_channel_create(self, channel: discord.abc.GuildChannel):
-        guild = self.bot.get_guild(self.bot.config["guild_id"])
 
         embed = discord.Embed(title=f"{channel.type.name.capitalize()} channel created",
                               description=f"**Name:** {channel.name}\n{f'**Category:** {channel.category}' if channel.category != None else ''}\n",
@@ -153,17 +297,16 @@ class Logging(BaseCog):
             if self.cache["logChannel"] == None:
                 return
 
-            chn = guild.get_channel(self.cache["logChannel"])
+            chn = self.guild.get_channel(self.cache["logChannel"])
             await chn.send(embed=embed)
 
             return
 
-        chn = guild.get_channel(self.cache["srvChannel"])
+        chn = self.guild.get_channel(self.cache["srvChannel"])
         await chn.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_guild_channel_delete(self, channel: discord.abc.GuildChannel):
-        guild = self.bot.get_guild(self.bot.config["guild_id"])
 
         embed = discord.Embed(title=f"{channel.type.name.capitalize()} channel deleted",
                               description=f"**Name:** {channel.name}\n{f'**Category:** {channel.category}' if channel.category != None else ''}\n",
@@ -175,17 +318,16 @@ class Logging(BaseCog):
             if self.cache["logChannel"] == None:
                 return
 
-            chn = guild.get_channel(self.cache["logChannel"])
+            chn = self.guild.get_channel(self.cache["logChannel"])
             await chn.send(embed=embed)
 
             return
 
-        chn = guild.get_channel(self.cache["srvChannel"])
+        chn = self.guild.get_channel(self.cache["srvChannel"])
         await chn.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_guild_channel_update(self, before: discord.abc.GuildChannel, after: discord.abc.GuildChannel):
-        guild = self.bot.get_guild(self.bot.config["guild_id"])
 
         embed = discord.Embed(
             title=f"{before.type.name.capitalize()} channel updated",
@@ -229,19 +371,18 @@ class Logging(BaseCog):
             if self.cache["logChannel"] == None:
                 return
 
-            chn = guild.get_channel(self.cache["logChannel"])
+            chn = self.guild.get_channel(self.cache["logChannel"])
             await chn.send(embed=embed)
 
             return
 
-        chn = guild.get_channel(self.cache["srvChannel"])
+        chn = self.guild.get_channel(self.cache["srvChannel"])
 
         if len(embed.fields) > 0:
             await chn.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_guild_role_create(self, role: discord.Role):
-        guild = self.bot.get_guild(self.bot.config["guild_id"])
 
         embed = discord.Embed(title="New role created",
                               description=f"**Name:** {role.name}\n**Color:** {role.colour}\n**Mentionable:** {role.mentionable}\n**Displayed separately:** {role.hoist}",
@@ -253,17 +394,16 @@ class Logging(BaseCog):
             if self.cache["logChannel"] == None:
                 return
 
-            chn = guild.get_channel(self.cache["logChannel"])
+            chn = self.guild.get_channel(self.cache["logChannel"])
             await chn.send(embed=embed)
 
             return
 
-        chn = guild.get_channel(self.cache["srvChannel"])
+        chn = self.guild.get_channel(self.cache["srvChannel"])
         await chn.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_guild_role_delete(self, role: discord.Role):
-        guild = self.bot.get_guild(self.bot.config["guild_id"])
 
         embed = discord.Embed(title=f"Role \"{role.name}\" removed",
                               description=f"**Name:** {role.name}\n**Color:** {role.colour}\n**Mentionable:** {role.mentionable}\n**Displayed separately:** {role.hoist}\n**Position:** {role.position}",
@@ -275,17 +415,16 @@ class Logging(BaseCog):
             if self.cache["logChannel"] == None:
                 return
 
-            chn = guild.get_channel(self.cache["logChannel"])
+            chn = self.guild.get_channel(self.cache["logChannel"])
             await chn.send(embed=embed)
 
             return
 
-        chn = guild.get_channel(self.cache["srvChannel"])
+        chn = self.guild.get_channel(self.cache["srvChannel"])
         await chn.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_guild_role_update(self, before: discord.Role, after: discord.Role):
-        guild = self.bot.get_guild(self.bot.config["guild_id"])
 
         embed = discord.Embed(title=f"Role \"{before.name}\" updated",
                               description=f"Role {before.mention} updated.",
@@ -325,12 +464,12 @@ class Logging(BaseCog):
             if self.cache["logChannel"] == None:
                 return
 
-            chn = guild.get_channel(self.cache["logChannel"])
+            chn = self.guild.get_channel(self.cache["logChannel"])
             await chn.send(embed=embed)
 
             return
 
-        chn = guild.get_channel(self.cache["srvChannel"])
+        chn = self.guild.get_channel(self.cache["srvChannel"])
 
         if len(embed.fields) > 0 or len(embed.fields) == 1 and before.position == after.position:
             await chn.send(embed=embed)
@@ -342,13 +481,11 @@ class Logging(BaseCog):
         if member.bot:
             return
 
-        guild = self.bot.get_guild(self.bot.config["guild_id"])
-
         def ordinal(n): return "%d%s" % (
             n, "tsnrhtdd"[(n//10 % 10 != 1)*(n % 10 < 4)*n % 10::4])
 
         embed = discord.Embed(title=f"New member joined",
-                              description=f"{member.mention} is the {ordinal(guild.member_count)} member.",
+                              description=f"{member.mention} is the {ordinal(self.guild.member_count)} member.",
                               timestamp=member.joined_at, colour=Colour.green())
 
         embed.set_author(
@@ -359,20 +496,18 @@ class Logging(BaseCog):
             if self.cache["logChannel"] == None:
                 return
 
-            chn = guild.get_channel(self.cache["logChannel"])
+            chn = self.guild.get_channel(self.cache["logChannel"])
             await chn.send(embed=embed)
 
             return
 
-        chn = guild.get_channel(self.cache["jlvChannel"])
+        chn = self.guild.get_channel(self.cache["jlvChannel"])
         await chn.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member):
         if member.bot:
             return
-
-        guild = self.bot.get_guild(self.bot.config["guild_id"])
 
         embed = discord.Embed(title=f"Member left",
                               description=f"{member.mention} joined <t:{int(time.mktime(member.joined_at.timetuple()))}:R>.",
@@ -386,12 +521,12 @@ class Logging(BaseCog):
             if self.cache["logChannel"] == None:
                 return
 
-            chn = guild.get_channel(self.cache["logChannel"])
+            chn = self.guild.get_channel(self.cache["logChannel"])
             await chn.send(embed=embed)
 
             return
 
-        chn = guild.get_channel(self.cache["jlvChannel"])
+        chn = self.guild.get_channel(self.cache["jlvChannel"])
         await chn.send(embed=embed)
 
 #-----------------------------------------member logs----------------------------------------#
@@ -400,8 +535,6 @@ class Logging(BaseCog):
     async def on_member_update(self, before: discord.Member, after: discord.Member):
         if before.bot:
             return
-
-        guild = self.bot.get_guild(self.bot.config["guild_id"])
 
         embed = discord.Embed(
             title=f"Member updated",
@@ -441,12 +574,12 @@ class Logging(BaseCog):
             if self.cache["logChannel"] == None:
                 return
 
-            chn = guild.get_channel(self.cache["logChannel"])
+            chn = self.guild.get_channel(self.cache["logChannel"])
             await chn.send(embed=embed)
 
             return
 
-        chn = guild.get_channel(self.cache["mbrChannel"])
+        chn = self.guild.get_channel(self.cache["mbrChannel"])
 
         if len(embed.fields) > 0:
             await chn.send(embed=embed)
@@ -455,8 +588,6 @@ class Logging(BaseCog):
     async def on_user_update(self, before: discord.Member, after: discord.Member):
         if before.bot:
             return
-
-        guild = self.bot.get_guild(self.bot.config["guild_id"])
 
         embed = discord.Embed(
             title=f"User updated",
@@ -486,12 +617,12 @@ class Logging(BaseCog):
             if self.cache["logChannel"] == None:
                 return
 
-            chn = guild.get_channel(self.cache["logChannel"])
+            chn = self.guild.get_channel(self.cache["logChannel"])
             await chn.send(embed=embed)
 
             return
 
-        chn = guild.get_channel(self.cache["mbrChannel"])
+        chn = self.guild.get_channel(self.cache["mbrChannel"])
 
         await chn.send(embed=embed)
 
@@ -499,7 +630,6 @@ class Logging(BaseCog):
 
     @commands.Cog.listener()
     async def on_error(self, exception: Exception, hint: str = "", suggestion: str = ""):
-        guild = self.bot.get_guild(self.bot.config["guild_id"])
 
         embed = discord.Embed(title="Error")
 
@@ -517,18 +647,17 @@ class Logging(BaseCog):
             if self.cache["logChannel"] == None:
                 return
 
-            chn = guild.get_channel(self.cache["logChannel"])
+            chn = self.guild.get_channel(self.cache["logChannel"])
             await chn.send(embed=embed)
 
             return
 
-        chn = guild.get_channel(self.cache["errChannel"])
+        chn = self.guild.get_channel(self.cache["errChannel"])
 
         await chn.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_application_command_error(self, ctx: discord.ApplicationContext, exception: discord.DiscordException):
-        guild = self.bot.get_guild(self.bot.config["guild_id"])
 
         embed = discord.Embed(
             title="Error",
@@ -542,12 +671,12 @@ class Logging(BaseCog):
             if self.cache["logChannel"] == None:
                 return
 
-            chn = guild.get_channel(self.cache["logChannel"])
+            chn = self.guild.get_channel(self.cache["logChannel"])
             await chn.send(embed=embed)
 
             return
 
-        chn = guild.get_channel(self.cache["errChannel"])
+        chn = self.guild.get_channel(self.cache["errChannel"])
 
         await chn.send(embed=embed)
 
@@ -559,7 +688,7 @@ class Logging(BaseCog):
                                    "Join/Leave logs channel", "jlvChannel"), OptionChoice("Member logs channel", "mbrChannel"),
                                OptionChoice("Error logs channel", "errChannel")]),
                       channel: discord.Option(discord.TextChannel, "The channel id you want to set the channel as.")):
-        if ctx.guild.get_channel(channel.id) == None:
+        if ctx.self.guild.get_channel(channel.id) == None:
             embed = discord.Embed(
                 title="Error", description="Channel not found in the server.")
             await ctx.respond(embed=embed)
