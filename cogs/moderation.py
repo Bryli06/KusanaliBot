@@ -1,4 +1,3 @@
-from email.policy import default
 import discord
 from discord.ext import commands
 from discord import ApplicationContext, Interaction
@@ -8,14 +7,12 @@ from datetime import datetime
 
 from core.context import ModContext
 import copy
-from math import floor
 import re
 from core.base_cog import BaseCog
 
 from core.time import UserFriendlyTime
 from core import checks
 from core.checks import PermissionLevel
-from core import config
 
 
 class Moderation(BaseCog):
@@ -99,7 +96,7 @@ class Moderation(BaseCog):
 
                 return
 
-        member_ids = self.get_member_ids(members)
+        member_ids = await self.get_member_ids(members)
 
         if len(member_ids) == 0:
             embed = discord.Embed(
@@ -158,7 +155,7 @@ class Moderation(BaseCog):
 
         """
 
-        member_ids = self.get_member_ids(members)
+        member_ids = await self.get_member_ids(members)
 
         if len(member_ids) == 0:
             embed = discord.Embed(
@@ -275,7 +272,7 @@ class Moderation(BaseCog):
 
         """
 
-        member_ids = self.get_member_ids(members)
+        member_ids = await self.get_member_ids(members)
 
         if len(member_ids) == 0:
             embed = discord.Embed(
@@ -402,7 +399,7 @@ class Moderation(BaseCog):
 
                 return
 
-        member_ids = self.get_member_ids(members)
+        member_ids = await self.get_member_ids(members)
 
         if len(member_ids) == 0:
             embed = discord.Embed(
@@ -455,7 +452,7 @@ class Moderation(BaseCog):
         await self.update_db()
 
         if after:
-            description += f"\Unmuting at <t:{round(after.dt.timestamp())}:F>.\n"
+            description += f"Unmuting at <t:{round(after.dt.timestamp())}:F>.\n"
 
         embed = discord.Embed(
             title="Report", description=description)
@@ -470,7 +467,7 @@ class Moderation(BaseCog):
 
         """
 
-        member_ids = self.get_member_ids(members)
+        member_ids = await self.get_member_ids(members)
 
         if len(member_ids) == 0:
             embed = discord.Embed(
@@ -596,7 +593,7 @@ class Moderation(BaseCog):
 
         """
 
-        member_ids = self.get_member_ids(members)
+        member_ids = await self.get_member_ids(members)
 
         if len(member_ids) == 0:
             embed = discord.Embed(
@@ -642,7 +639,7 @@ class Moderation(BaseCog):
 
         """
 
-        member_ids = self.get_member_ids(members)
+        member_ids = await self.get_member_ids(members)
 
         if len(member_ids) == 0:
             embed = discord.Embed(
@@ -651,7 +648,7 @@ class Moderation(BaseCog):
 
             return
 
-        def _warns_callback(interaction: Interaction):
+        async def _warns_callback(interaction: Interaction):
             warn_select.values.sort(reverse=True)
             for value in warn_select.values:
                 self.cache["warns"][str(member_id)].pop(int(value))
@@ -661,6 +658,8 @@ class Moderation(BaseCog):
 
             self.bot.dispatch("member_pardon", ModContext(
                 member=member, moderator=ctx.author, timestamp=datetime.now().timestamp()))
+
+            await interaction.response.defer()
 
             warn_view.stop()
 
@@ -675,7 +674,7 @@ class Moderation(BaseCog):
                 continue
 
             warn_select = Select(placeholder="Select warns", max_values=len(self.cache["warns"][str(member_id)]),
-                                 options=[discord.SelectOption(label=count+1, value=count) for count in range[0, len(self.cache["warns"][str(member_id)])]])
+                                 options=[discord.SelectOption(label=str(count+1), value=str(count)) for count in range[0, len(self.cache["warns"][str(member_id)])]])
             warn_select.callback = _warns_callback
 
             warn_view = View(warn_select)
@@ -717,13 +716,8 @@ class Moderation(BaseCog):
 
         description = ""
         for action in actions:
-            if "pardoned_by" in action:
-                _moderator = await self.bot.fetch_user(action["responsible"])
-                _pardon_mod = await self.bot.fetch_user(action["pardoned_by"])
-                description += f'**Warn id: {action["id"]}**\n Moderator: {_moderator.mention} ({action["responsible"]}) \n Reason: {action["reason"]} \n Date: <t:{round(action["time"])}:F> \n Pardoned by: {_pardon_mod.mention} ({action["pardoned_by"]}) \n Pardon date: <t:{round(action["pardon_time"])}:F> \n\n'
-            else:
-                _moderator = await self.bot.fetch_user(action["responsible"])
-                description += f'**Warn id: {action["id"]}**\n Moderator: {_moderator.mention} ({action["responsible"]}) \n Reason: {action["reason"]} \n Date: <t:{round(action["time"])}:F> \n\n'
+            moderator = await self.bot.fetch_user(action["responsible"])
+            description += f'Moderator: {moderator.mention} ({action["responsible"]}) \n Reason: {action["reason"]} \n Date: <t:{round(action["time"])}:F> \n\n'
 
         if not description:
             description = "This user has no warns."
@@ -743,7 +737,7 @@ class Moderation(BaseCog):
 
         """
 
-        member_ids = self.get_member_ids(members)
+        member_ids = await self.get_member_ids(members)
 
         if len(member_ids) == 0:
             embed = discord.Embed(
@@ -760,9 +754,9 @@ class Moderation(BaseCog):
                 description += f"The member with ID `{member_id}` was not found.\n"
                 continue
 
-            description += f"The member {member.mention} `{member.name}#{member.discriminator}` got a note written about them."
+            description += f"The member {member.mention} `{member.name}#{member.discriminator}` got a note written about them.\n"
 
-            self.cache["notes"].setdefault(str(members), []).append(
+            self.cache["notes"].setdefault(str(member_id), []).append(
                 {"responsible": ctx.author.id, "note": note, "time": datetime.now().timestamp()})
 
         await self.update_db()
@@ -779,7 +773,7 @@ class Moderation(BaseCog):
 
         """
         
-        member_ids = self.get_member_ids(members)
+        member_ids = await self.get_member_ids(members)
 
         if len(member_ids) == 0:
             embed = discord.Embed(
@@ -788,10 +782,12 @@ class Moderation(BaseCog):
 
             return
 
-        def _notes_callback(interaction: Interaction):
+        async def _notes_callback(interaction: Interaction):
             note_select.values.sort(reverse=True)
             for value in note_select.values:
                 self.cache["notes"][str(member_id)].pop(int(value))
+
+            await interaction.response.defer()
 
             note_view.stop()
 
@@ -806,7 +802,7 @@ class Moderation(BaseCog):
                 continue
 
             note_select = Select(placeholder="Select notes", max_values=len(self.cache["notes"][str(member_id)]),
-                                 options=[discord.SelectOption(label=count+1, value=count) for count in range[0, len(self.cache["notes"][str(member_id)])]])
+                                 options=[discord.SelectOption(label=str(count+1), value=str(count)) for count in range(len(self.cache["notes"][str(member_id)]))])
             note_select.callback = _notes_callback
 
             note_view = View(note_select)
@@ -815,8 +811,8 @@ class Moderation(BaseCog):
             embed.description += "".join([f"Responsible: <@{note['responsible']}> Note: {note['note']}"
                                           for note in self.cache["notes"][str(member_id)]])
 
-            await ctx.response.edit_message(embed=embed, view=note_view)
-
+            await ctx.interaction.edit_original_message(embed=embed, view=note_view)
+            
             await note_view.wait()
 
         await self.update_db()
@@ -845,8 +841,8 @@ class Moderation(BaseCog):
 
         description = ""
         for action in actions:
-            _moderator = await self.bot.fetch_user(action["responsible"])
-            description += f'**Note id: {action["id"]}**\n Moderator: {_moderator.mention} ({action["responsible"]}) \n Note: {action["notes"]} \n Date: <t:{round(action["time"])}:F> \n\n'
+            moderator = await self.bot.fetch_user(action["responsible"])
+            description += f'Moderator: {moderator.mention} ({action["responsible"]}) \n Note: {action["note"]} \n Date: <t:{round(action["time"])}:F> \n\n'
 
         if not description:
             description = "This user has no notes."
