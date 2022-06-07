@@ -9,11 +9,9 @@ class BaseCog(commands.Cog):
     logger = get_logger(__name__)
 
     def __init__(self, bot):
-        self.bot = bot
+        self.bot: commands.Bot = bot
         self.db = self.bot.db[self._id]
         self.cache = {}
-
-        self.guild: discord.Guild = self.bot.get_guild(self.bot.config["guild_id"])
 
         self.bot.loop.create_task(self.load_cache())
 
@@ -30,6 +28,8 @@ class BaseCog(commands.Cog):
             db = self.default_cache
 
         self.cache = db
+
+        self.guild: discord.Guild = await self.bot.fetch_guild(self.bot.config["guild_id"])
 
         self.bot.tasks_done = self.bot.tasks_done + 1
 
