@@ -27,7 +27,7 @@ def only_modmail_thread(modmail_channel_id) -> Callable[[T], T]:
 
     """
 
-    async def predicate(ctx: discord.ApplicationContext) -> bool:
+    async def predicate(ctx) -> bool:
         if type(ctx.channel) == discord.threads.Thread and ctx.channel.parent_id == modmail_channel_id:
             return True
 
@@ -53,7 +53,7 @@ def has_permissions(permission_level: PermissionLevel = PermissionLevel.REGULAR)
     return commands.check(predicate)
 
 
-async def check_permissions(ctx: discord.ApplicationContext, permission_level) -> bool:
+async def check_permissions(ctx: commands.Context, permission_level) -> bool:
     """
     Checks if a user has the permissions required.
 

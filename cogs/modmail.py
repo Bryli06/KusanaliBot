@@ -30,12 +30,15 @@ class Modmail(BaseCog):
     def __init__(self, bot) -> None:
         super().__init__(bot)
 
+    async def after_load(self):
+        self.modmail_channel = await self.guild.fetch_channel(self._modmail_channel_id)
+
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         if message.author.bot or message.guild != None or str(message.author.id) not in self.cache["userThreads"]:
             return
-            
-        thread = self.guild.get_thread(
+        
+        thread = await self.guild.fetch_channel(
             self.cache["userThreads"][str(message.author.id)])
 
         embed = discord.Embed(description=message.content, timestamp=datetime.now())
@@ -56,7 +59,7 @@ class Modmail(BaseCog):
             if self.cache["userThreads"][user] == thread.id:
                 self.cache["userThreads"].pop(user)
 
-                member = thread.guild.get_member(int(user))
+                member = await self.guild.fetch_member(int(user))
                 await member.send("Session was closed by staff.")
                 
                 break
@@ -72,7 +75,7 @@ class Modmail(BaseCog):
             if self.cache["userThreads"][user] == thread.id:
                 self.cache["userThreads"].pop(user)
 
-                member = thread.guild.get_member(int(user))
+                member = await self.guild.fetch_member(int(user))
                 await member.send("Session was closed by staff.")
 
                 break
@@ -91,7 +94,7 @@ class Modmail(BaseCog):
             if self.cache["userThreads"][user] == before.id:
                 self.cache["userThreads"].pop(user)
 
-                member = before.guild.get_member(int(user))
+                member = await self.guild.fetch_member(int(user))
                 await member.send("Session was closed by staff.")
 
                 break
@@ -108,7 +111,7 @@ class Modmail(BaseCog):
 
         for user in self.cache["userThreads"]:
             if self.cache["userThreads"][user] == ctx.channel.id:
-                member = self.guild.get_member(int(user))
+                member = await self.guild.fetch_member(int(user))
 
                 dm_channel = await member.create_dm()
                 await dm_channel.send(embed=embed)
@@ -124,11 +127,9 @@ class Modmail(BaseCog):
 
             return
 
-        modmail_channel = self.guild.get_channel(self._modmail_channel_id)
+        member = await self.guild.fetch_member(ctx.author.id)
 
-        member = self.guild.get_member(ctx.author.id)
-
-        thread: discord.Thread = await modmail_channel.create_thread(name=title)
+        thread: discord.Thread = await self.modmail_channel.create_thread(name=title)
 
         embed = discord.Embed(
             description=f"{ctx.author.mention}\nReason for mail: {reason}", timestamp=datetime.now())
@@ -145,7 +146,7 @@ class Modmail(BaseCog):
 
         await thread.send(embed=embed)
 
-        role = self.guild.get_role(self._modmail_role_id)
+        role = await self.guild._fetch_role(self._modmail_role_id)
         for member in role.members:
             break
             await thread.add_user(member)
@@ -165,7 +166,7 @@ class Modmail(BaseCog):
 
         self.ending = True
 
-        thread = self.guild.get_thread(
+        thread = await self.guild.fetch_channel(
             self.cache["userThreads"][str(ctx.author.id)])
 
         await thread.archive()

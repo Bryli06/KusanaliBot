@@ -5,13 +5,11 @@ import time
 import discord
 from discord.ext import commands
 
-from discord import ApplicationContext, CategoryChannel, ChannelType, Colour, Embed, EmbedField, ForumChannel, Interaction, OptionChoice, Permissions, SlashCommandGroup, StageChannel, TextChannel, VoiceChannel
+from discord import ApplicationContext, Colour, Embed, OptionChoice, SlashCommandGroup
 
 from core import checks
-from core import context
 from core.base_cog import BaseCog
 from core.checks import PermissionLevel
-from core import logger
 
 
 class Logging(BaseCog):
@@ -32,9 +30,9 @@ class Logging(BaseCog):
 #--------------------------------------moderation logs---------------------------------------#
 
     @commands.Cog.listener()
-    async def on_member_ban(self, ctx):
+    async def on_member_delete(self, ctx):
         embed = Embed(title="Member banned",
-                      timestamp=ctx.timestamp, colour=Colour.red)
+                      timestamp=datetime.now(), colour=Colour.red())
 
         embed.add_field(name="Member banned",
                         value=f"{ctx.member.name}#{ctx.member.discriminator}")
@@ -58,11 +56,11 @@ class Logging(BaseCog):
 
         chn = await self.guild.fetch_channel(self.cache["modChannel"])
         await chn.send(embed=embed)
-
+    
     @commands.Cog.listener()
-    async def on_member_unban(self, ctx):
+    async def on_member_undelete(self, ctx):
         embed = Embed(title="Member unbanned",
-                      timestamp=ctx.timestamp, colour=Colour.green)
+                      timestamp=datetime.now(), colour=Colour.green())
 
         embed.add_field(name="Member unbanned",
                         value=f"{ctx.member.name}#{ctx.member.discriminator}")
@@ -86,7 +84,7 @@ class Logging(BaseCog):
     @commands.Cog.listener()
     async def on_member_warn(self, ctx):
         embed = Embed(title="Member warned",
-                      timestamp=ctx.timestamp, colour=Colour.red)
+                      timestamp=datetime.now(), colour=Colour.red())
 
         embed.add_field(name="Member warned",
                         value=f"{ctx.member.name}#{ctx.member.discriminator}")
@@ -94,9 +92,6 @@ class Logging(BaseCog):
 
         if ctx.reason:
             embed.add_field(name="Reason", value=ctx.reason)
-
-        if ctx.id:
-            embed.add_field(name="Warn ID", value=ctx.id)
 
         if self.cache["modChannel"] == None:
             if self.cache["logChannel"] == None:
@@ -113,7 +108,7 @@ class Logging(BaseCog):
     @commands.Cog.listener()
     async def on_member_pardon(self, ctx):
         embed = Embed(title="Member pardoned",
-                      timestamp=ctx.timestamp, colour=Colour.green)
+                      timestamp=datetime.now(), colour=Colour.green())
 
         embed.add_field(name="Member pardoned",
                         value=f"{ctx.member.name}#{ctx.member.discriminator}")
@@ -121,9 +116,6 @@ class Logging(BaseCog):
 
         if ctx.reason:
             embed.add_field(name="Reason", value=ctx.reason)
-
-        if ctx.id:
-            embed.add_field(name="Warn ID", value=ctx.id)
 
         if self.cache["modChannel"] == None:
             if self.cache["logChannel"] == None:
@@ -140,7 +132,7 @@ class Logging(BaseCog):
     @commands.Cog.listener()
     async def on_member_kick(self, ctx):
         embed = Embed(title="Member kicked",
-                      timestamp=ctx.timestamp, colour=Colour.red)
+                      timestamp=datetime.now(), colour=Colour.red())
 
         embed.add_field(name="Member kicked",
                         value=f"{ctx.member.name}#{ctx.member.discriminator}")
@@ -164,7 +156,7 @@ class Logging(BaseCog):
     @commands.Cog.listener()
     async def on_member_mute(self, ctx):
         embed = Embed(title="Member muted",
-                      timestamp=ctx.timestamp, colour=Colour.red)
+                      timestamp=datetime.now(), colour=Colour.red())
 
         embed.add_field(name="Member muted",
                         value=f"{ctx.member.name}#{ctx.member.discriminator}")
@@ -192,7 +184,7 @@ class Logging(BaseCog):
     @commands.Cog.listener()
     async def on_member_unmute(self, ctx):
         embed = Embed(title="Member unmuted",
-                      timestamp=ctx.timestamp, colour=Colour.green)
+                      timestamp=datetime.now(), colour=Colour.green())
 
         embed.add_field(name="Member unmuted",
                         value=f"{ctx.member.name}#{ctx.member.discriminator}")
@@ -485,7 +477,7 @@ class Logging(BaseCog):
             n, "tsnrhtdd"[(n//10 % 10 != 1)*(n % 10 < 4)*n % 10::4])
 
         embed = discord.Embed(title=f"New member joined",
-                              description=f"{member.mention} is the {ordinal(self.guild.member_count)} member.",
+                              description=f"{member.mention} is the {ordinal(self.guild.approximate_member_count)} member.",
                               timestamp=member.joined_at, colour=Colour.green())
 
         embed.set_author(
@@ -662,7 +654,8 @@ class Logging(BaseCog):
         embed = discord.Embed(
             title="Error",
             description=f"It seems an error has occured.\nError:`{exception}`\nIf you believe this to be a bug please report it to the technical mod team.")
-
+        
+        await ctx.response.defer()
         await ctx.respond(embed=embed)
 
         embed.description = f"Command `{ctx.command}` has raised an error.\nError with traceback\n`{''.join(tb.format_exception(None, exception, exception.__traceback__))}`"
@@ -688,7 +681,7 @@ class Logging(BaseCog):
                                    "Join/Leave logs channel", "jlvChannel"), OptionChoice("Member logs channel", "mbrChannel"),
                                OptionChoice("Error logs channel", "errChannel")]),
                       channel: discord.Option(discord.TextChannel, "The channel id you want to set the channel as.")):
-        if ctx.self.guild.get_channel(channel.id) == None:
+        if await self.guild.fetch_channel(channel.id) == None:
             embed = discord.Embed(
                 title="Error", description="Channel not found in the server.")
             await ctx.respond(embed=embed)

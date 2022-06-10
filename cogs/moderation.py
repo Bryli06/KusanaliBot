@@ -1,6 +1,7 @@
+import os
 import discord
 from discord.ext import commands
-from discord import ApplicationContext, Interaction
+from discord import ApplicationContext, Interaction, Permissions
 from discord.ui import View, Select
 
 from datetime import datetime
@@ -13,6 +14,8 @@ from core.base_cog import BaseCog
 from core.time import UserFriendlyTime
 from core import checks
 from core.checks import PermissionLevel
+
+import random
 
 
 class Moderation(BaseCog):
@@ -78,7 +81,7 @@ class Moderation(BaseCog):
     @checks.has_permissions(PermissionLevel.OWNER)
     async def ban(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to ban."),
                   duration: discord.Option(str, description="How long to ban the member for. Leave blank to permenantly ban.", default="inf"),
-                  reason: discord.Option(str, description="Reason for ban.", default="")):
+                  reason: discord.Option(str, description="Reason for ban.", default="No reason given.")):
         """
         Bans a member via /ban [members] [duration: Optional] [reason: Optional]
 
@@ -134,7 +137,7 @@ class Moderation(BaseCog):
             self.cache["bans"].setdefault(str(member_id), []).append(
                 {"responsible": ctx.author.id, "reason": reason, "duration": duration, "time": datetime.now().timestamp()})
 
-            self.bot.dispatch("member_ban", ModContext(member=member, moderator=ctx.author,
+            self.bot.dispatch("member_delete", ModContext(member=member, moderator=ctx.author,
                               reason=reason, timestamp=datetime.now().timestamp(), duration=duration))
 
         await self.update_db()
@@ -149,7 +152,7 @@ class Moderation(BaseCog):
     @commands.slash_command(name="unban", description="Unbans a member")
     @checks.has_permissions(PermissionLevel.OWNER)
     async def unban(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to unban."),
-                    reason: discord.Option(str, description="Reason for unban.", default="")):
+                    reason: discord.Option(str, description="Reason for unban.", default="No reason given.")):
         """
         Unbans a member via /unban [members] 
 
@@ -187,7 +190,7 @@ class Moderation(BaseCog):
             self.cache["unbans"].setdefault(str(member_id), []).append(
                 {"responsible": ctx.author.id, "reason": reason, "time": datetime.now().timestamp()})
 
-            self.bot.dispatch("member_unban", ModContext(
+            self.bot.dispatch("member_undelete", ModContext(
                 member=member, moderator=ctx.author, reason=reason, timestamp=datetime.now().timestamp()))
 
         await self.update_db()
@@ -266,7 +269,7 @@ class Moderation(BaseCog):
     @commands.slash_command(name="kick", description="Kicks a member")
     @checks.has_permissions(PermissionLevel.OWNER)
     async def kick(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to kick."),
-                   reason: discord.Option(str, description="Reason for kick.", default="")):
+                   reason: discord.Option(str, description="Reason for kick.", default="No reason given.")):
         """
         Kicks a member via /kick [members] [reason: Optional]
 
@@ -356,7 +359,7 @@ class Moderation(BaseCog):
 
         """
 
-        if self.guild.get_role(role.id) == None:
+        if await self.guild._fetch_role(role.id) == None:
             embed = discord.Embed(
                 title="Success", description=f"Role was not found in the guild.")
             await ctx.respond(embed=embed)
@@ -374,7 +377,7 @@ class Moderation(BaseCog):
     @checks.has_permissions(PermissionLevel.OWNER)
     async def mute(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to mute."),
                    duration: discord.Option(str, description="How long to mute the member for. Leave blank to permenant.", default="inf"),
-                   reason: discord.Option(str, description="Reason for mute.", default="")):
+                   reason: discord.Option(str, description="Reason for mute.", default="No reason given.")):
         """
         Mutes a member via /mute [members] [duration: Optional] [reason: Optional]
 
@@ -408,11 +411,11 @@ class Moderation(BaseCog):
 
             return
 
-        mute_role = ctx.guild.get_role(self.cache["muteRole"])
+        mute_role = self.guild._fetch_role(self.cache["muteRole"])
 
         description = ""
         for member_id in member_ids:
-            member: discord.Member = await self.guild.get_member(int(member_id))
+            member: discord.Member = await self.guild.fetch_member(int(member_id))
 
             if member == None:
                 description += f"The member with ID `{member_id}` was not found.\n"
@@ -461,7 +464,7 @@ class Moderation(BaseCog):
     @commands.slash_command(name="unmute", description="Unmutes a member.")
     @checks.has_permissions(PermissionLevel.OWNER)
     async def unmute(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to unmute."),
-                     reason: discord.Option(str, description="Reason for unmute.", default="")):
+                     reason: discord.Option(str, description="Reason for unmute.", default="No reason given.")):
         """
         Unmutes a member via /unmute [members] [reason: optional]
 
@@ -476,11 +479,11 @@ class Moderation(BaseCog):
 
             return
 
-        mute_role = ctx.guild.get_role(self.cache["muteRole"])
+        mute_role = self.guild._fetch_role(self.cache["muteRole"])
 
         description = ""
         for member_id in member_ids:
-            member: discord.Member = await self.guild.get_member(int(member_id))
+            member: discord.Member = await self.guild.fetch_member(int(member_id))
 
             if member == None:
                 description += f"The member with ID `{member_id}` was not found.\n"
@@ -491,7 +494,7 @@ class Moderation(BaseCog):
                 continue
 
             try:
-                roles = [self.guild.get_role(role.id) for role in member.roles]
+                roles = [await self.guild._fetch_role(role.id) for role in member.roles]
                 await member.edit(roles=roles)
 
                 description += f"The member {member.mention} `{member.name}#{member.discriminator}` has been successfully unmuted."
@@ -530,8 +533,8 @@ class Moderation(BaseCog):
 
     async def _unmute_helper(self, member_id):
         try:
-            member = self.guild.get_member(int(member_id))
-            roles = [self.guild.get_role(
+            member = await self.guild.fetch_member(int(member_id))
+            roles = [await self.guild._fetch_role(
                 role_id) for role_id in self.cache["mutes"][member_id][-1]["roles"]]
 
             await member.edit(roles=roles)
@@ -587,7 +590,7 @@ class Moderation(BaseCog):
     @commands.slash_command(name="warn", description="Warns a member.")
     @checks.has_permissions(PermissionLevel.OWNER)
     async def warn(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to warn."),
-                   reason: discord.Option(str, description="Warn reason.", default="")):
+                   reason: discord.Option(str, description="Warn reason.", default="No reason given.")):
         """
         Warns a member via /warn [members] [reason]
 
@@ -633,7 +636,8 @@ class Moderation(BaseCog):
 
     @commands.slash_command(name="pardon", description="Pardons a warn")
     @checks.has_permissions(PermissionLevel.OWNER)
-    async def pardon(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to pardon warns for.")):
+    async def pardon(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to pardon warns for."),
+                     reason: discord.Option(str, description="Warn reason.", default="No reason given.")):
         """
         Pardons warns for some members via /pardon [members]
 
@@ -654,10 +658,10 @@ class Moderation(BaseCog):
                 self.cache["warns"][str(member_id)].pop(int(value))
 
             self.cache["pardons"].setdefault(str(member_id), []).append(
-                {"responsible": ctx.author.id, "time": datetime.now().timestamp()})
+                {"responsible": ctx.author.id, "reason": reason, "time": datetime.now().timestamp()})
 
             self.bot.dispatch("member_pardon", ModContext(
-                member=member, moderator=ctx.author, timestamp=datetime.now().timestamp()))
+                member=member, moderator=ctx.author, reason=reason, timestamp=datetime.now().timestamp()))
 
             await interaction.response.defer()
 
@@ -674,7 +678,7 @@ class Moderation(BaseCog):
                 continue
 
             warn_select = Select(placeholder="Select warns", max_values=len(self.cache["warns"][str(member_id)]),
-                                 options=[discord.SelectOption(label=str(count+1), value=str(count)) for count in range[0, len(self.cache["warns"][str(member_id)])]])
+                                 options=[discord.SelectOption(label=str(count+1), value=str(count)) for count in range(len(self.cache["warns"][str(member_id)]))])
             warn_select.callback = _warns_callback
 
             warn_view = View(warn_select)
@@ -683,7 +687,7 @@ class Moderation(BaseCog):
             embed.description += "".join([f"Responsible: <@{warn['responsible']}> Reason: {warn['reason'] if not '' else 'No reason given'}"
                                           for warn in self.cache["warns"][str(member_id)]])
 
-            await ctx.response.edit_message(embed=embed, view=warn_view)
+            await ctx.interaction.edit_original_message(embed=embed, view=warn_view)
 
             await warn_view.wait()
 
@@ -696,7 +700,7 @@ class Moderation(BaseCog):
     async def warns(self, ctx: ApplicationContext, member: discord.Option(discord.Member, description="The members you want to get warns for.")):
         """
         Lists all the warns for a member
-        
+
         """
 
         member_id = str(member.id)
@@ -772,7 +776,7 @@ class Moderation(BaseCog):
         Omits notes for some members via /omit [members]
 
         """
-        
+
         member_ids = await self.get_member_ids(members)
 
         if len(member_ids) == 0:
@@ -812,11 +816,11 @@ class Moderation(BaseCog):
                                           for note in self.cache["notes"][str(member_id)]])
 
             await ctx.interaction.edit_original_message(embed=embed, view=note_view)
-            
+
             await note_view.wait()
 
         await self.update_db()
-        
+
         await ctx.delete()
 
     @commands.slash_command(name="notes", description="Lists all notes for a member")
@@ -824,7 +828,7 @@ class Moderation(BaseCog):
     async def notes(self, ctx: ApplicationContext, member: discord.Option(discord.Member, description="The members you want to get notes.")):
         """
         Lists all the notes for a member
-        
+
         """
 
         member_id = str(member.id)
@@ -846,7 +850,7 @@ class Moderation(BaseCog):
 
         if not description:
             description = "This user has no notes."
-            
+
         embed = discord.Embed(
             title=f"{member.name} ({member.id})", description=description)
         await ctx.respond(embed=embed)
@@ -894,6 +898,30 @@ class Moderation(BaseCog):
         embed = discord.Embed(
             title="Success!", description=f"Successfully set slowmode in {channel.mention} to {seconds}s.")
         await ctx.respond(embed=embed)
+
+    @commands.slash_command(name="bonk", description="Bonk your enemies.", default_member_permissions=Permissions(manage_messages=True))
+    @checks.has_permissions(PermissionLevel.TC_MOD)
+    async def bonk(self, ctx: ApplicationContext, member: discord.Option(discord.Member, "Member to bonk.")):
+        if member.id == 906318377432281088:
+            file = discord.File(
+                f"./assets/feet/{random.choice(os.listdir('./assets/feet/'))}")
+
+            await ctx.response.send_message(f"{ctx.author.mention} likes feet", file=file)
+
+            return
+
+        file = discord.File(
+            f"./assets/bonk/{random.choice(os.listdir('./assets/bonk/'))}")
+
+        await ctx.response.send_message(member.mention, file=file)
+
+    @commands.slash_command(name="feet", description="feet", default_member_permissions=Permissions(manage_messages=True))
+    @checks.has_permissions(PermissionLevel.TC_MOD)
+    async def feet(self, ctx: ApplicationContext):
+        file = discord.File(
+            f"./assets/feet/{random.choice(os.listdir('./assets/feet/'))}")
+
+        await ctx.response.send_message(file=file)
 
 
 def setup(bot):

@@ -75,7 +75,7 @@ class Salute(BaseCog):
         if self.cache["channels"]["welcome"] == "":
             return
 
-        channel: discord.TextChannel = self.bot.get_channel(int(self.cache["channels"]["welcome"]))
+        channel: discord.TextChannel = await self.guild.fetch_channel(int(self.cache["channels"]["welcome"]))
 
         if channel == None:
             return
@@ -95,7 +95,7 @@ class Salute(BaseCog):
         if self.cache["channels"]["farewell"] == "":
             return
 
-        channel: discord.TextChannel = self.bot.get_channel(int(self.cache["channels"]["farewell"]))
+        channel: discord.TextChannel = await self.guild.fetch_channel(int(self.cache["channels"]["farewell"]))
 
         if channel == None:
             return
@@ -122,10 +122,10 @@ class Salute(BaseCog):
         frw_channel: discord.TextChannel = ctx.channel
 
         if self.cache["channels"]["welcome"] != "":
-            wlc_channel = self.bot.get_channel(int(self.cache["channels"]["welcome"]))
+            wlc_channel = await self.guild.fetch_channel(int(self.cache["channels"]["welcome"]))
 
         if self.cache["channels"]["welcome"] != "":
-            frw_channel = self.bot.get_channel(int(self.cache["channels"]["farewell"]))
+            frw_channel = await self.guild.fetch_channel(int(self.cache["channels"]["farewell"]))
 
         if self.cache["messages"]["welcome"] is not None and self.cache["messages"]["welcome"] != "":
             await wlc_channel.send(await self.translate_message(ctx.author, self.cache["messages"]["welcome"], wlc_channel))
@@ -221,8 +221,8 @@ class Salute(BaseCog):
 
         """
 
-        wlc_channel = self.bot.get_channel(int(self.cache["channels"]["welcome"]))
-        frw_channel = self.bot.get_channel(int(self.cache["channels"]["farewell"]))
+        wlc_channel = await self.guild.fetch_channel(int(self.cache["channels"]["welcome"]))
+        frw_channel = await self.guild.fetch_channel(int(self.cache["channels"]["farewell"]))
 
         embed = discord.Embed(
             title="Channels",

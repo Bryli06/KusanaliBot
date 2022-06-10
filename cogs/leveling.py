@@ -288,7 +288,7 @@ class Leveling(BaseCog):
             placeholder="Select level roles",
             max_values=len(self.bot.config["levelRoles"]) if len(
                 self.bot.config["levelRoles"]) <= 25 else 25,
-            options=[discord.SelectOption(label=self.guild.get_role(role).name, value=str(
+            options=[discord.SelectOption(label=await self.guild._fetch_role(role).name, value=str(
                 role)) for role in self.bot.config["levelRoles"]][:25]
         )
 
@@ -349,7 +349,7 @@ class Leveling(BaseCog):
             placeholder="Select level roles",
             max_values=len(self.bot.config["levelRoles"]) if len(
                 self.bot.config["levelRoles"]) <= 25 else 25,
-            options=[discord.SelectOption(label=self.guild.get_role(role).name, value=str(
+            options=[discord.SelectOption(label=await self.guild._fetch_role(role).name, value=str(
                 role)) for role in self.bot.config["levelRoles"]][:25]
         )
 
@@ -434,7 +434,7 @@ class Leveling(BaseCog):
         if exp + self.exp_given >= next_level:
             if str(level) in self.cache["levelEvents"]:
                 for level_event in self.cache["levelEvents"][str(level)]:
-                    role = self.guild.get_role(level_event["role"])
+                    role = await self.guild._fetch_role(level_event["role"])
                     if role == None:
                         self.logger.error(
                             "Role for level event was not found.")

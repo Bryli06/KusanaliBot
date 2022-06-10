@@ -44,7 +44,7 @@ class Giveaway(BaseCog):
             await self.start_thread(int(message_id))
 
     async def start_thread(self, message_id):
-        channel: TextChannel = self.guild.get_channel(
+        channel: TextChannel = await self.guild.fetch_channel(
             self.cache["giveaways"][str(message_id)]["channel"])
 
         try:
@@ -172,7 +172,7 @@ class Giveaway(BaseCog):
             placeholder="Select allowed roles",
             max_values=len(self.bot.config["levelRoles"]) if len(
                 self.bot.config["levelRoles"]) <= 25 else 25,
-            options=[discord.SelectOption(label=self.guild.get_role(role).name, value=str(
+            options=[discord.SelectOption(label=await self.guild._fetch_role(role).name, value=str(
                 role)) for role in self.bot.config["levelRoles"]][:25]
         )
 

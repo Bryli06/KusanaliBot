@@ -68,7 +68,7 @@ class Configurator(BaseCog):
         for role_id in role_ids:
             if int(role_id) in self.cache["levelRoles"]:
                 description += f"The role <@&{role_id}> already exists in the database.\n"
-            elif self.guild.get_role(int(role_id)) == None:
+            elif await self.guild._fetch_role(int(role_id)) == None:
                 description += f"The role with ID `{role_id}` was not found in the guild."
             else:
                 self.cache["levelRoles"].append(int(role_id))
@@ -140,6 +140,10 @@ class Configurator(BaseCog):
         embed = discord.Embed(
             title="Success", description=f"New {'' if mod == 'mod' else 'trial' if mod == 'trialMod' else 'theorycraft'} mod role set {role.mention}.")
         await ctx.respond(embed=embed)
+
+    @commands.slash_command(name="ping", description="Returns bot latency.")
+    async def ping(self, ctx):
+        await ctx.respond(f'Pong! {round (self.bot.latency * 1000)} ms')
 
 
 def setup(bot):
