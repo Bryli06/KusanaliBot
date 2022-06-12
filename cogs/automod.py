@@ -97,7 +97,7 @@ class AutoMod(BaseCog):
         # stop if the word has already been banned
         if banned_word in self.cache["bannedWords"]:
             embed = discord.Embed(
-                title="Error", description=f"{banned_word} is blacklisted", colour=Colour.red())
+                title="Error", description=f"{banned_word} is banned", colour=Colour.red())
 
             await ctx.respond(embed=embed)
             return
@@ -115,12 +115,12 @@ class AutoMod(BaseCog):
                 discord.SelectOption(
                     label="Whole",
                     value="whole",
-                    description="Blacklists whole messages."
+                    description="Bans whole messages."
                 ),
                 discord.SelectOption(
                     label="Case",
                     value="case",
-                    description="Blacklists case sensitive messages."
+                    description="Bans case sensitive messages."
                 )
             ]
         )
@@ -130,7 +130,7 @@ class AutoMod(BaseCog):
             await self.update_db()
 
             embed = discord.Embed(
-                title="Success", description=f"{banned_word} was added to the blacklist.", colour=Colour.green())
+                title="Success", description=f"{banned_word} was added to the banlist.", colour=Colour.green())
 
             await interaction.response.send_message(embed=embed)
 
@@ -149,7 +149,7 @@ class AutoMod(BaseCog):
 
         if banned_word not in self.cache["bannedWords"]:
             embed = discord.Embed(
-                title="Error", description=f"{banned_word} was not blacklisted", colour=Colour.red())
+                title="Error", description=f"{banned_word} was not banned", colour=Colour.red())
 
             ctx.respond(embed=embed)
             return
@@ -159,7 +159,7 @@ class AutoMod(BaseCog):
         await self.update_db()
 
         embed = discord.Embed(
-            title="Success", description=f"{banned_word} was removed from blacklist.", colour=Colour.green())
+            title="Success", description=f"{banned_word} was removed from the banlist.", colour=Colour.green())
 
         await ctx.respond(embed=embed)
 
