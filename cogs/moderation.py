@@ -893,12 +893,18 @@ class Moderation(BaseCog):
     @commands.slash_command(name="bonk", description="Bonk your enemies.", default_member_permissions=Permissions(manage_messages=True))
     @checks.has_permissions(PermissionLevel.STAFF)
     async def bonk(self, ctx: ApplicationContext, member: discord.Option(discord.Member, "Member to bonk.")):
+        """
+        Bonks user, bonk owner for a surprise.
+        
+        """
+
+        await ctx.defer()
+
         if member.id == 227244423166033921:
             for i in range(4):
                 file = discord.File(
                     f"./assets/bonk/{random.choice(os.listdir('./assets/bonk/'))}")
 
-                await ctx.defer()
                 await ctx.respond(file=file)
 
             return
@@ -906,7 +912,6 @@ class Moderation(BaseCog):
         file = discord.File(
             f"./assets/bonk/{random.choice(os.listdir('./assets/bonk/'))}")
 
-        await ctx.defer()
         await ctx.respond(":(" if member.id == 906318377432281088 else member.mention, file=file)
 
     @commands.slash_command(name="feet", description="feet", default_member_permissions=Permissions(manage_messages=True))
