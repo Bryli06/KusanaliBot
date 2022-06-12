@@ -82,10 +82,10 @@ class Giveaway(BaseCog):
         """
 
         async def _enter_callback(interaction: Interaction):
-            cache = self.cache["giveaways"][str(message.id)]
+            giveaway = self.cache["giveaways"][str(message.id)]
 
             # stops if user has already joined giveaway
-            if interaction.user.id in cache["participants"]:
+            if interaction.user.id in giveaway["participants"]:
                 embed = discord.Embed(
                     title="Error", description="You can't enter more than once.", colour=Colour.red())
                 await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -93,7 +93,7 @@ class Giveaway(BaseCog):
                 return
 
             # stops if user does not have any of the roles needed to enter
-            if not any(role.id in self.cache["allowedRoles"] for role in interaction.user.roles):
+            if not any(role.id in giveaway["allowedRoles"] for role in interaction.user.roles):
                 embed = discord.Embed(
                     title="Error", description="You do not possess any of the roles needed to enter.", colour=Colour.red())
                 await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -101,7 +101,7 @@ class Giveaway(BaseCog):
                 return
 
             # adds user to the participants list
-            cache["participants"].append(interaction.user.id)
+            giveaway["participants"].append(interaction.user.id)
             await self.update_db()
 
             embed = discord.Embed(
