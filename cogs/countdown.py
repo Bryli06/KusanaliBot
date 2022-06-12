@@ -1,11 +1,11 @@
 import asyncio
-import time
+from bson import utc
 
 import discord
 from discord.ext import commands
 from discord import ApplicationContext, Colour, Permissions, SlashCommandGroup
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from dateutil import relativedelta
 
 from core import checks
@@ -46,9 +46,9 @@ class Countdown(BaseCog):
                 return
 
     async def update(self, name, date, channel):
-        diff = relativedelta.relativedelta(date, datetime.utcnow())
+        diff = relativedelta.relativedelta(date, datetime.now(utc))
 
-        if date < datetime.utcnow():
+        if date < datetime.now(utc):
             await channel.edit(name=name)
             self.cache["countdowns"].pop(str(channel.id))
             return False
@@ -115,9 +115,9 @@ class Countdown(BaseCog):
 
         """
 
-        date = datetime(year, month, day).utcnow()
+        date = datetime(year, month, day, tzinfo=utc)
 
-        if date <= datetime.utcnow():
+        if date <= datetime.now(utc):
             embed = discord.Embed(
                 title="Error", description="Invalid time provided.", colour=Colour.red())
             await ctx.respond(embed=embed)
