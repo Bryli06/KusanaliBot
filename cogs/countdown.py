@@ -39,6 +39,7 @@ class Countdown(BaseCog):
         if not channel:
             self.cache["countdowns"].pop(str(channel_id))
             await self.update_db()
+            
             return
 
         while True:
@@ -51,6 +52,7 @@ class Countdown(BaseCog):
         if date < datetime.now(utc):
             await channel.edit(name=name)
             self.cache["countdowns"].pop(str(channel.id))
+
             return False
 
         years = diff.years
