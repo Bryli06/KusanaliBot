@@ -80,14 +80,22 @@ async def check_permissions(ctx: commands.Context, permission_level) -> bool:
 
     """
 
+    guild: discord.Guild = await ctx.bot.fetch_guild(ctx.bot.config["guild_id"])
+
     # check for server/bot ownership
-    if await ctx.bot.is_owner(ctx.author) or ctx.author.id == ctx.bot.user.id or ctx.author.id == ctx.guild.owner_id or str(ctx.author.id) in ctx.bot.config["owners"]:
+    if await ctx.bot.is_owner(ctx.author) or ctx.author.id == ctx.bot.user.id or ctx.author.id == guild.owner_id or str(ctx.author.id) in ctx.bot.config["owners"]:
         return True
+
+    # stop if command is in dm
+    if ctx.guild == None:
+        raise commands.CheckFailure("You do not have the required permissions.")
 
     # check for admin
     if permission_level is not PermissionLevel.OWNER:
         if ctx.channel.permissions_for(ctx.author).administrator:
             return True
+    else:
+        return False
 
     # check for section admin
     if permission_level is not PermissionLevel.ADMINISTRATOR:
@@ -96,16 +104,22 @@ async def check_permissions(ctx: commands.Context, permission_level) -> bool:
 
         if  ctx.author.get_role(ctx.bot.config["eventAdmin"]) != None:
             return True
+    else:
+        return False
 
     # check for mod
     if permission_level is not PermissionLevel.TC_ADMIN and permission_level is not PermissionLevel.EVENT_ADMIN:
         if ctx.author.get_role(ctx.bot.config["mod"]) != None:
             return True
+    else:
+        return False
 
     # check for trial mod
     if permission_level is not PermissionLevel.MOD:
         if ctx.author.get_role(ctx.bot.config["trialMod"]) != None:
             return True
+    else:
+        return False
 
     # check for section mod
     if permission_level is not PermissionLevel.TRIAL_MOD:
@@ -114,11 +128,15 @@ async def check_permissions(ctx: commands.Context, permission_level) -> bool:
 
         if  ctx.author.get_role(ctx.bot.config["eventMod"]) != None:
             return True
+    else:
+        return False
 
     # check for staff
     if permission_level is not PermissionLevel.TC_MOD and permission_level is not PermissionLevel.EVENT_MOD:
         if ctx.channel.permissions_for(ctx.author).manage_messages:
             return True
+    else:
+        return False
 
     # check for regular user
     if permission_level is PermissionLevel.REGULAR:
