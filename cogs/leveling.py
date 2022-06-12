@@ -280,7 +280,7 @@ class Leveling(BaseCog):
                        user: discord.Option(discord.User, "The user whose level you wish to change."),
                        mode: discord.Option(str, "How you wish to set the exp",
                                             choices=[discord.OptionChoice("Experience", "exp"), discord.OptionChoice("Level", "level")]),
-                       amount: discord.Option(int, "The amount you wish to change the user's exp to")):
+                       amount: discord.Option(int, "The amount you wish to change the user's exp to", min_value=0)):
         """
         Sets the exp of a user.
 
