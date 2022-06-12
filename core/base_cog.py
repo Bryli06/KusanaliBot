@@ -12,8 +12,6 @@ class BaseCog(commands.Cog):
         self.db = self.bot.db[self._id]
         self.cache = {}
 
-        self.guild: discord.Guild = self.bot.guild
-
         # loads the cache from the database
         self.bot.loop.create_task(self.load_cache())
 
@@ -39,6 +37,8 @@ class BaseCog(commands.Cog):
 
         if update:
             await self.update_db()
+
+        self.guild: discord.Guild = await self.bot.fetch_guild(self.bot.config["guild_id"])
 
         # signal that the task is finished by incrementing tasks_done
         self.bot.tasks_done = self.bot.tasks_done + 1
