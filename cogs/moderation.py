@@ -869,7 +869,7 @@ class Moderation(BaseCog):
                        hours: discord.Option(int, "Hours.", min_value=0, default=0)):
         """
         Sets slowmode for a channel.
-        
+
         """
 
         duration = seconds + 60 * (minutes + 60 * hours)
@@ -895,17 +895,14 @@ class Moderation(BaseCog):
     async def bonk(self, ctx: ApplicationContext, member: discord.Option(discord.Member, "Member to bonk.")):
         """
         Bonks user, bonk owner for a surprise.
-        
+
         """
 
         await ctx.defer()
 
         if member.id == 227244423166033921:
-            for i in range(4):
-                file = discord.File(
-                    f"./assets/bonk/{random.choice(os.listdir('./assets/bonk/'))}")
-
-                await ctx.respond(member.mention, file=file)
+            file = discord.File("./assets/wake-up-luma.gif")
+            await ctx.respond(member.mention, file=file)
 
             return
 
