@@ -884,10 +884,10 @@ class Moderation(BaseCog):
         if not channel:
             channel = ctx.channel
 
-        await channel.edit(slowmode_delay=seconds)
+        await channel.edit(slowmode_delay=duration)
 
         embed = discord.Embed(
-            title="Success", description=f"Successfully set slowmode in {channel.mention} to {seconds}s.", colour=Colour.green())
+            title="Success", description=f"Successfully set slowmode in {channel.mention} to {duration}s.", colour=Colour.green())
         await ctx.respond(embed=embed)
 
     @commands.slash_command(name="bonk", description="Bonk your enemies.", default_member_permissions=Permissions(manage_messages=True))
