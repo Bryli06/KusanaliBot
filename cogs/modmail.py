@@ -26,8 +26,12 @@ class Modmail(BaseCog):
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
-        if message.author.bot or message.guild != None or str(message.author.id) not in self.cache["userThreads"]:
+        if message.author.bot or message.guild != None:
             return
+
+        if str(message.author.id) not in self.cache["userThreads"]:
+            embed = discord.Embed(
+                description="If you wish to start a modmail thread please use `/start`\nFor ending an active thread please use `/end`", colour=Colour.blue())
 
         thread = await self.guild.fetch_channel(
             self.cache["userThreads"][str(message.author.id)])
@@ -102,7 +106,8 @@ class Modmail(BaseCog):
 
         """
 
-        embed = discord.Embed(description=message, timestamp=datetime.now(), colour=Colour.blue())
+        embed = discord.Embed(description=message,
+                              timestamp=datetime.now(), colour=Colour.blue())
         embed.set_author(
             name=f"{ctx.author.name}#{ctx.author.discriminator}", icon_url=ctx.author.avatar)
 
