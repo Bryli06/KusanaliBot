@@ -65,7 +65,7 @@ class Logging(BaseCog):
 
         if ctx.duration:
             embed.add_field(name="Duration",
-                            value=f"{'Permanent' if ctx.duration == 'inf' else f'Until <t:{int(ctx.duration)}:F>'}")
+                            value="Permanent" if ctx.duration == 0 else f"Until <t:{int(ctx.duration)}:F>")
 
         if ctx.reason:
             embed.add_field(name="Reason", value=ctx.reason)
@@ -199,7 +199,7 @@ class Logging(BaseCog):
 
         if ctx.duration:
             embed.add_field(name="Duration",
-                            value=f"{'Permanent' if ctx.duration == 'inf' else f'Until <t:{int(ctx.duration)}:F>'}")
+                            value="Permanent" if ctx.duration == 0 else f"Until <t:{int(ctx.duration)}:F>")
 
         if ctx.reason:
             embed.add_field(name="Reason", value=ctx.reason)
@@ -720,6 +720,16 @@ class Logging(BaseCog):
                               "A command was probably used in a place the bot cannot access.")
 
         embed.description = f"Command `{ctx.command}` has raised an error.\nError with traceback\n`{''.join(tb.format_exception(None, exception, exception.__traceback__))}`"
+
+        try:
+            embed.add_field(name="Command ran by", value=ctx.author.mention)
+        except Exception:
+            pass
+
+        try:
+            embed.add_field(name="Command ran in", value=ctx.channel.mention)
+        except Exception:
+            pass
 
         await self.fix_embed(embed)
 

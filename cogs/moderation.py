@@ -79,24 +79,16 @@ class Moderation(BaseCog):
     @commands.slash_command(name="ban", description="Bans a member", default_member_permissions=Permissions(ban_members=True))
     @checks.has_permissions(PermissionLevel.MOD)
     async def ban(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to ban."),
-                  duration: discord.Option(str, description="How long to ban the member for. Leave blank to permenantly ban.", default="inf"),
+                  minutes: discord.Option(int, "Minutes.", min_value=0, default=0),
+                  hours: discord.Option(int, "Hours.", min_value=0, default=0),
+                  days: discord.Option(int, "Days.", min_value=0, default=0),
                   reason: discord.Option(str, description="Reason for ban.", default="No reason given.")):
         """
         Bans a member via /ban [members] [duration: Optional] [reason: Optional]
 
         """
 
-        after = None
-        if duration != "inf":
-            after = UserFriendlyTime()
-
-            try:
-                await after.convert(duration)
-            except Exception as e:
-                embed = discord.Embed(title="Error", description=e, colour=Colour.red())
-                await ctx.respond(embed=embed)
-
-                return
+        duration = 60 * (minutes + 60 * (hours + 24 * days))
 
         member_ids = await self.get_member_ids(members)
 
@@ -129,9 +121,9 @@ class Moderation(BaseCog):
                 self.logger.error(f"Could not message {member.name}.")
                 description += "but a message could not be sent.\n"
 
-            if after:
-                self.cache["unbanQueue"][str(member_id)] = after.dt
-                await self._unban(member, after.dt)
+            if duration > 0:
+                self.cache["unbanQueue"][str(member_id)] = duration
+                await self._unban(member, duration)
 
             self.cache["bans"].setdefault(str(member_id), []).append(
                 {"responsible": ctx.author.id, "reason": reason, "duration": duration, "time": datetime.now().timestamp()})
@@ -141,8 +133,8 @@ class Moderation(BaseCog):
 
         await self.update_db()
 
-        if after:
-            description += f"\nUnbanning at <t:{round(after.dt.timestamp())}:F>.\n"
+        if duration > 0:
+            description += f"\nUnbanning at <t:{duration}:F>.\n"
 
         embed = discord.Embed(
             title="Report", description=description, colour=Colour.blue())
@@ -270,7 +262,6 @@ class Moderation(BaseCog):
 
 #----------------------------------------kicks----------------------------------------#
 
-
     @commands.slash_command(name="kick", description="Kicks a member", default_member_permissions=Permissions(kick_members=True))
     @checks.has_permissions(PermissionLevel.TRIAL_MOD)
     async def kick(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to kick."),
@@ -381,7 +372,9 @@ class Moderation(BaseCog):
     @commands.slash_command(name="mute", description="Mutes a member", default_member_permissions=Permissions(manage_messages=True))
     @checks.has_permissions(PermissionLevel.TRIAL_MOD)
     async def mute(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to mute."),
-                   duration: discord.Option(str, description="How long to mute the member for. Leave blank to permenant.", default="inf"),
+                   minutes: discord.Option(int, "Minutes.", min_value=0, default=0),
+                   hours: discord.Option(int, "Hours.", min_value=0, default=0),
+                   days: discord.Option(int, "Days.", min_value=0, default=0),
                    reason: discord.Option(str, description="Reason for mute.", default="No reason given.")):
         """
         Mutes a member via /mute [members] [duration: Optional] [reason: Optional]
@@ -395,17 +388,7 @@ class Moderation(BaseCog):
 
             return
 
-        after = None
-        if duration != "inf":
-            after = UserFriendlyTime()
-
-            try:
-                await after.convert(duration)
-            except Exception as e:
-                embed = discord.Embed(title="Error", description=e, colour=Colour.red())
-                await ctx.respond(embed=embed)
-
-                return
+        duration = 60 * (minutes + 60 * (hours + 24 * days))
 
         member_ids = await self.get_member_ids(members)
 
@@ -447,9 +430,9 @@ class Moderation(BaseCog):
                 self.logger.error(f"Could not message {member.name}.")
                 description += "but a message could not be sent.\n"
 
-            if after:
-                self.cache["unmuteQueue"][str(member_id)] = after.dt
-                await self._unmute(member, after.dt)
+            if duration > 0:
+                self.cache["unmuteQueue"][str(member_id)] = duration
+                await self._unmute(member, duration)
 
             self.cache["mutes"].setdefault(str(member_id), []).append(
                 {"responsible": ctx.author.id, "reason": reason, "duration": duration, "time": datetime.now().timestamp(), "roles": roles})
@@ -459,8 +442,8 @@ class Moderation(BaseCog):
 
         await self.update_db()
 
-        if after:
-            description += f"Unmuting at <t:{round(after.dt.timestamp())}:F>.\n"
+        if duration > 0:
+            description += f"Unmuting at <t:{duration}:F>.\n"
 
         embed = discord.Embed(
             title="Report", description=description, colour=Colour.blue())
@@ -880,35 +863,22 @@ class Moderation(BaseCog):
 
     @commands.slash_command(name="slowmode", description="Sets slowmode for a channel.", default_member_permissions=Permissions(manage_channels=True))
     @checks.has_permissions(PermissionLevel.ADMINISTRATOR)
-    async def slowmode(self, ctx: ApplicationContext, channel: discord.Option(discord.TextChannel, description="The channel you want to set slowmode.", default=None), time: discord.Option(str, description="The slowmode time.", default="0s")):
-        regex = (r'((?P<hours>-?\d+)h)?'
-                 r'((?P<minutes>-?\d+)m)?'
-                 r'((?P<seconds>-?\d+)s)?')
-        match = re.compile(regex, re.IGNORECASE).match(str(time))
-        seconds = None
+    async def slowmode(self, ctx: ApplicationContext, channel: discord.Option(discord.TextChannel, description="The channel you want to set slowmode.", default=None),
+                       seconds: discord.Option(int, "Seconds.", min_value=0, default=0),
+                       minutes: discord.Option(int, "Minutes.", min_value=0, default=0),
+                       hours: discord.Option(int, "Hours.", min_value=0, default=0)):
+        """
+        Sets slowmode for a channel.
+        
+        """
 
-        if match:
-            for k, v in match.groupdict().items():
-                if v:
-                    if not seconds:
-                        seconds = 0
-                    if k == 'hours':
-                        seconds += int(v)*3600
-                    elif k == "minutes":
-                        seconds += int(v)*60
-                    elif k == "seconds":
-                        seconds += int(v)
+        duration = seconds + 60 * (minutes + 60 * hours)
 
-        if seconds is None:
+        if duration > 21600:
             embed = discord.Embed(
-                title="Error", description=f"Could not parse time: {time}. Make sure it is in the form []h[]m[]s.", colour=Colour.red())
+                title="Error", description=f"Duration {duration}s too large. Maximum slowmode is 6h (21600s).", colour=Colour.red())
             await ctx.respond(embed=embed)
-            return
-
-        if seconds > 21600:
-            embed = discord.Embed(
-                title="Error", description=f"Parsed time {seconds}s too large. Maximum slowmode is 6h.", colour=Colour.red())
-            await ctx.respond(embed=embed)
+            
             return
 
         if not channel:

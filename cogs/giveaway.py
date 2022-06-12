@@ -199,11 +199,23 @@ class Giveaway(BaseCog):
     @checks.has_permissions(PermissionLevel.EVENT_ADMIN)
     async def _ga_create(self, ctx: ApplicationContext, reward: discord.Option(str, "The name of the reward."),
                          winners: discord.Option(int, "The number of winners.", min_value=1),
-                         seconds: discord.Option(int, "For how long you wish the giveaway to stay up.", min_value=1)):
+                         minutes: discord.Option(int, "Minutes.", min_value=0, default=0),
+                         hours: discord.Option(int, "Hours.", min_value=0, default=0),
+                         days: discord.Option(int, "Days.", min_value=0, default=0)):
         """
         Creates a new giveaway.
 
         """
+
+        duration = 60 * (minutes + 60 * (hours + 24 * days))
+
+        # stop if amount is 0
+        if duration == 0:
+            embed = discord.Embed(
+                title=f"Error", description="Time cannot be 0.", colour=Colour.red())
+            ctx.respond(embed=embed)
+
+            return
 
         # limits the roles shown to 25
         allowed_roles = Select(
@@ -215,7 +227,7 @@ class Giveaway(BaseCog):
         )
 
         async def _roles_callback(interaction: Interaction):
-            unix = int(time.mktime(datetime.now().timetuple())) + seconds
+            unix = int(time.mktime(datetime.now().timetuple())) + duration
 
             giveaway = {
                 "channel": ctx.channel_id,

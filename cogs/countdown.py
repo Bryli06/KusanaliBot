@@ -1,14 +1,14 @@
 import asyncio
+import time
 
 import discord
 from discord.ext import commands
 from discord import ApplicationContext, Colour, Permissions, SlashCommandGroup
 
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from dateutil import relativedelta
 
 from core import checks
-from core.time import UserFriendlyTime
 from core.checks import PermissionLevel
 from core.base_cog import BaseCog
 
@@ -26,22 +26,23 @@ class Countdown(BaseCog):
         },
     }
 
-    _cd = SlashCommandGroup("countdown", "Manages countdown channels.", default_member_permissions=Permissions(manage_messages=True))
+    _cd = SlashCommandGroup("countdown", "Manages countdown channels.",
+                            default_member_permissions=Permissions(manage_messages=True))
 
     async def after_load(self):
         for k, v in list(self.cache["countdowns"].items()):
             await self.start_countdown(k)
 
-    async def start_countdown(self, channelId):
-        channel = self.bot.get_channel(int(channelId))
+    async def start_countdown(self, channel_id):
+        channel = await self.guild.fetch_channel(int(channel_id))
 
         if not channel:
-            self.cache["countdowns"].pop(str(channelId))
+            self.cache["countdowns"].pop(str(channel_id))
             await self.update_db()
             return
 
         while True:
-            if not await self.update(self.cache["countdowns"][str(channelId)]['name'], self.cache["countdowns"][str(channelId)]['date'], channel):
+            if not await self.update(self.cache["countdowns"][str(channel_id)]["name"], self.cache["countdowns"][str(channel_id)]["date"], channel):
                 return
 
     async def update(self, name, date, channel):
@@ -100,19 +101,29 @@ class Countdown(BaseCog):
         else:
             await channel.edit(name=name)
             return False
+
         return True
 
-    @_cd.command(name="create", description="Create a countdown")
+    @_cd.command(name="create", description="Create a countdown using a date.")
     @checks.has_permissions(PermissionLevel.OWNER)
-    async def create(self, ctx: ApplicationContext, name: discord.Option(str, description="Message you would like to count down"), time: discord.Option(str, description="How long the countdown is")):
-        after = UserFriendlyTime()
-        await after.convert(time)
+    async def create(self, ctx: ApplicationContext, name: discord.Option(str, description="Message you would like to count down"),
+                     day: discord.Option(int, "Day.", min_value=0, default=0),
+                     month: discord.Option(int, "Month.", min_value=0, default=0),
+                     year: discord.Option(int, "Year.", min_value=0, default=0)):
+        """
+        Creates a new countdown in the form of a voice channel.
 
-        if after.dt <= datetime.utcnow():
+        """
+
+        date = datetime(year, month, day).utcnow()
+
+        if date <= datetime.utcnow():
             embed = discord.Embed(
                 title="Error", description="Invalid time provided.", colour=Colour.red())
             await ctx.respond(embed=embed)
+
             return
+
         vc = None
 
         try:
@@ -121,9 +132,10 @@ class Countdown(BaseCog):
             embed = discord.Embed(
                 title="Error", description="Bot does not have permissions.", colour=Colour.red())
             await ctx.respond(embed=embed)
+
             return
 
-        self.cache["countdowns"][str(vc.id)] = {"name": name, "date": after.dt}
+        self.cache["countdowns"][str(vc.id)] = {"name": name, "date": date}
         await self.update_db()
 
         self.bot.loop.create_task(self.start_countdown(str(vc.id)))
@@ -132,9 +144,14 @@ class Countdown(BaseCog):
             title="Success", description="Countdown created.", colour=Colour.green())
         await ctx.respond(embed=embed)
 
-    @commands.slash_command(name="cd", description="Gets duration until Kusanali Drop")
+    @commands.slash_command(name="cd", description="Gets duration until Kusanali Drop.")
     @checks.has_permissions(PermissionLevel.REGULAR)
     async def cd(self, ctx: ApplicationContext):
+        """
+        Gets the countdown until Kusanali drop and sends it as an image.
+
+        """
+
         diff = round((datetime.fromtimestamp(
             Countdown.kusanali_drop) - datetime.now()).total_seconds())
 
