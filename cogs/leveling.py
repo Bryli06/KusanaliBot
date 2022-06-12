@@ -332,7 +332,7 @@ class Leveling(BaseCog):
             placeholder="Select level roles",
             max_values=len(self.bot.config["levelRoles"]) if len(
                 self.bot.config["levelRoles"]) <= 25 else 25,
-            options=[discord.SelectOption(label=await self.guild._fetch_role(role).name, value=str(
+            options=[discord.SelectOption(label=(await self.guild._fetch_role(role)).name, value=str(
                 role)) for role in self.bot.config["levelRoles"]][:25]
         )
 
@@ -394,7 +394,7 @@ class Leveling(BaseCog):
             placeholder="Select level roles",
             max_values=len(self.bot.config["levelRoles"]) if len(
                 self.bot.config["levelRoles"]) <= 25 else 25,
-            options=[discord.SelectOption(label=await self.guild._fetch_role(role).name, value=str(
+            options=[discord.SelectOption(label=(await self.guild._fetch_role(role)).name, value=str(
                 role)) for role in self.bot.config["levelRoles"]][:25]
         )
 
