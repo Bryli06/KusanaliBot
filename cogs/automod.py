@@ -2,11 +2,13 @@ import discord
 from discord.ext import commands
 from discord.ui import Select, View
 
-from discord import ApplicationContext, Interaction, OptionChoice, SlashCommandGroup
+from discord import ApplicationContext, Colour, Interaction, Permissions, SlashCommandGroup
 
 from core import checks
 from core.base_cog import BaseCog
 from core.checks import PermissionLevel
+
+import re
 
 
 class AutoMod(BaseCog):
@@ -18,59 +20,87 @@ class AutoMod(BaseCog):
         }
     }
 
-    _bl = SlashCommandGroup("blacklist", "Manages blacklisted words.")
-
-    def __init__(self, bot) -> None:
-        super().__init__(bot)
+    _bl = SlashCommandGroup("banlist", "Manages banned words.",
+                            default_member_permissions=Permissions(manage_messages=True))
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         if message.author.bot:
             return
 
+        # checks for actions to execute
         delete = False
 
+        final_message = message.content
+
         for banned_word in self.cache["bannedWords"]:
+            # the flags that are used when checking for banned words
             whole = "whole" in self.cache["bannedWords"][banned_word]
             case = "case" in self.cache["bannedWords"][banned_word]
 
-            if await self.find_banned_word(message, banned_word, whole, case):
+            match = await self.find_banned_word(final_message, banned_word, whole, case)
+            if match[0]:
                 delete |= "delete" in self.cache["bannedWords"][banned_word]
-                break
+
+                final_message = match[1]
 
         # delete message
         if delete:
             await message.delete()
 
             dm_channel = await message.author.create_dm()
-            await dm_channel.send("Your message was deleted due to it containing a banned word.")
+
+            embed = discord.Embed(
+                description=final_message, colour=Colour.red(), timestamp=message.created_at)
+            embed.set_author(
+                name=f"{message.author.name}#{message.author.discriminator}", icon_url=message.author.avatar)
+
+            await dm_channel.send(f"Your message was deleted due to it containing a banned word.", embed=embed)
 
     async def find_banned_word(self, message, banned_word, whole=False, case=False):
-        content = message.content
+        """
+        Finds the banned word, if any exist, in the message with the given flags.
 
+        Returns a tuple, if the banned word was found, and the message with banned word censored.
+
+        """
+
+        check_message = message
+
+        # not case sensitive, turn them all to lowercase
         if not case:
-            content = content.lower()
+            check_message = check_message.lower()
             banned_word = banned_word.lower()
 
         if whole:
-            words = content.split(' ')
+            # matches whole substrings only
+            match = re.search(r"\b" + banned_word + r"\b", check_message)
+            return (match != None, re.sub(r"\b" + banned_word + r"\b", "\*" * len(banned_word), message))
 
-            for word in words:
-                if word == banned_word:
-                    return True
+        # matches any substring
+        match = re.search(banned_word, check_message)
+        return (match != None, re.sub(banned_word, "\*" * len(banned_word), message))
 
-            return False
-
-        return banned_word in content
-
-    # Adds a word to the blacklist. Takes in a word to word/phrase to blacklist first followed by flags. Flags will start with the prefix %. Possible flags include %whole, %delete, %warn, etc.
-    @_bl.command(name="add", description="Blacklist a word with given flags.")
-    @checks.has_permissions(PermissionLevel.OWNER)
+    @_bl.command(name="add", description="Bans a word with given flags.")
+    @checks.has_permissions(PermissionLevel.ADMINISTRATOR)
     async def bl_add(self, ctx: ApplicationContext, banned_word: discord.Option(str, "The word you want to ban.")):
         """
-        Blacklist a word with given flags.
+        Ban a word with given flags.
+
+        Flags available:
+            delete: Delete the message
+            whole: Match whole substrings only
+            case: Substring is case sensitive
 
         """
+
+        # stop if the word has already been banned
+        if banned_word in self.cache["bannedWords"]:
+            embed = discord.Embed(
+                title="Error", description=f"{banned_word} is blacklisted", colour=Colour.red())
+
+            await ctx.respond(embed=embed)
+            return
 
         flags = Select(
             placeholder="Select flags",
@@ -95,23 +125,12 @@ class AutoMod(BaseCog):
             ]
         )
 
-        if banned_word in self.cache["bannedWords"]:
-            embed = discord.Embed(
-                title="Word already banned",
-                description=f"{banned_word} is blacklisted"
-            )
-
-            await ctx.respond(embed=embed)
-            return
-
         async def _flag_callback(interaction: Interaction):
             self.cache["bannedWords"].update({banned_word: flags.values})
             await self.update_db()
 
             embed = discord.Embed(
-                title="Success!",
-                description=f"{banned_word} was added to the blacklist."
-            )
+                title="Success", description=f"{banned_word} was added to the blacklist.", colour=Colour.green())
 
             await interaction.response.send_message(embed=embed)
 
@@ -120,54 +139,49 @@ class AutoMod(BaseCog):
         flag_view = View(flags)
         await ctx.respond(view=flag_view, ephemeral=True)
 
-    @_bl.command(name="remove", description="Remove a word from the blacklist.")
-    @checks.has_permissions(PermissionLevel.OWNER)
+    @_bl.command(name="remove", description="Remove a word from the banlist.")
+    @checks.has_permissions(PermissionLevel.ADMINISTRATOR)
     async def bl_remove(self, ctx, banned_word: discord.Option(str, "The word you want to unban.")):
         """
-        Remove a word from the blacklist.
+        Remove a word from the banlist.
 
         """
 
-        if self.cache["bannedWords"].pop(banned_word, "Word not found") == "Word not found":
+        if banned_word not in self.cache["bannedWords"]:
             embed = discord.Embed(
-                title="Error: Argument not found",
-                description=f"{banned_word} was not blacklisted"
-            )
+                title="Error", description=f"{banned_word} was not blacklisted", colour=Colour.red())
 
             ctx.respond(embed=embed)
             return
 
+        self.cache["bannedWords"].pop(banned_word)
+
         await self.update_db()
 
         embed = discord.Embed(
-            title="Success!",
-            description=f"{banned_word} was removed from blacklist."
-        )
+            title="Success", description=f"{banned_word} was removed from blacklist.", colour=Colour.green())
 
         await ctx.respond(embed=embed)
 
-    # Lists all the banned words in the cache
-    @_bl.command(name="list", description="Lists all the blacklisted words and their flags.")
-    @checks.has_permissions(PermissionLevel.OWNER)
+    @_bl.command(name="show", description="Lists all the banned words and their flags.")
+    @checks.has_permissions(PermissionLevel.MOD)
     async def bl_list(self, ctx: ApplicationContext):
         """
-        Lists all the blacklisted words and their flags.
+        Lists all the banned words and their flags.
 
         """
 
-        message = ""
+        description = ""
         for banned_word in self.cache["bannedWords"]:
-            message += banned_word + ": "
+            description += banned_word + ": "
 
             for flag in self.cache["bannedWords"][banned_word]:
-                message += flag + " "
+                description += flag + " "
 
-            message += "\n"
+            description += "\n"
 
         embed = discord.Embed(
-            title="Blacklisted words:",
-            description=message
-        )
+            title="Banned words:", description=description, colour=Colour.blue())
 
         await ctx.respond(embed=embed)
 

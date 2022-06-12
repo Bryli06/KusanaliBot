@@ -1,9 +1,8 @@
 from datetime import datetime
 import discord
 from discord.ext import commands
-from discord.ui import Select, View
 
-from discord import ApplicationContext, CategoryChannel, Embed, Interaction, OptionChoice, SlashCommandGroup
+from discord import ApplicationContext, Colour, Permissions
 
 from core import checks
 from core.base_cog import BaseCog
@@ -22,14 +21,6 @@ class Modmail(BaseCog):
         }
     }
 
-    _rm = SlashCommandGroup(
-        "regmail", "Contains all modmail commands for users.")
-    _mm = SlashCommandGroup(
-        "modmail", "Contains all modmail commands for mods.")
-
-    def __init__(self, bot) -> None:
-        super().__init__(bot)
-
     async def after_load(self):
         self.modmail_channel = await self.guild.fetch_channel(self._modmail_channel_id)
 
@@ -37,17 +28,18 @@ class Modmail(BaseCog):
     async def on_message(self, message: discord.Message):
         if message.author.bot or message.guild != None or str(message.author.id) not in self.cache["userThreads"]:
             return
-        
+
         thread = await self.guild.fetch_channel(
             self.cache["userThreads"][str(message.author.id)])
 
-        embed = discord.Embed(description=message.content, timestamp=datetime.now())
+        embed = discord.Embed(description=message.content,
+                              timestamp=datetime.now(), colour=Colour.blue())
         embed.set_author(
             name=f"{message.author.name}#{message.author.discriminator}", icon_url=message.author.avatar)
 
         await thread.send(embed=embed)
 
-    # Check for if the user is ending the session
+    # check if the user is ending the session
     ending = False
 
     @commands.Cog.listener()
@@ -61,7 +53,7 @@ class Modmail(BaseCog):
 
                 member = await self.guild.fetch_member(int(user))
                 await member.send("Session was closed by staff.")
-                
+
                 break
 
         await self.update_db()
@@ -70,7 +62,7 @@ class Modmail(BaseCog):
     async def on_thread_remove(self, thread):
         if self.ending:
             return
-            
+
         for user in self.cache["userThreads"]:
             if self.cache["userThreads"][user] == thread.id:
                 self.cache["userThreads"].pop(user)
@@ -86,7 +78,7 @@ class Modmail(BaseCog):
     async def on_thread_update(self, before, after):
         if self.ending:
             return
-            
+
         if after.archived == False and before.id == after.id:
             return
 
@@ -101,11 +93,16 @@ class Modmail(BaseCog):
 
         await self.update_db()
 
-
-    @_mm.command(name="reply", description="Replies to a user in a modmail thread.")
+    @commands.slash_command(name="reply", description="Replies to a user in a modmail thread.", default_member_permissions=Permissions(manage_messages=True))
+    @checks.has_permissions(PermissionLevel.MOD)
     @checks.only_modmail_thread(_modmail_channel_id)
-    async def _mm_reply(self, ctx: ApplicationContext, message: discord.Option(str, "The message you wish to reply with.")):
-        embed = discord.Embed(description=message, timestamp=datetime.now())
+    async def reply(self, ctx: ApplicationContext, message: discord.Option(str, "The message you wish to reply with.")):
+        """
+        Replies to a modmail thread.
+
+        """
+
+        embed = discord.Embed(description=message, timestamp=datetime.now(), colour=Colour.blue())
         embed.set_author(
             name=f"{ctx.author.name}#{ctx.author.discriminator}", icon_url=ctx.author.avatar)
 
@@ -118,10 +115,15 @@ class Modmail(BaseCog):
 
         await ctx.respond(embed=embed)
 
-    @_rm.command(name="start", description="Starts a modmail session.")
+    @commands.slash_command(name="start", description="Starts a modmail session.")
     @commands.dm_only()
-    async def _rm_start(self, ctx: ApplicationContext, title: discord.Option(str, "The title of the thread."),
-                        reason: discord.Option(str, "The reason for starting a modmail sessions.")):
+    async def start(self, ctx: ApplicationContext, title: discord.Option(str, "The title of the thread."),
+                    reason: discord.Option(str, "The reason for starting a modmail sessions.")):
+        """
+        Starts a new modmail thread. DM only command.
+
+        """
+
         if str(ctx.author.id) in self.cache["userThreads"]:
             await ctx.respond("Session already started.")
 
@@ -132,7 +134,7 @@ class Modmail(BaseCog):
         thread: discord.Thread = await self.modmail_channel.create_thread(name=title)
 
         embed = discord.Embed(
-            description=f"{ctx.author.mention}\nReason for mail: {reason}", timestamp=datetime.now())
+            description=f"{ctx.author.mention}\nReason for mail: {reason}", timestamp=datetime.now(), colour=Colour.green())
 
         embed.set_author(
             name=f"{member.name}#{member.discriminator}", icon_url=member.display_avatar)
@@ -148,7 +150,6 @@ class Modmail(BaseCog):
 
         role = await self.guild._fetch_role(self._modmail_role_id)
         for member in role.members:
-            break
             await thread.add_user(member)
 
         self.cache["userThreads"].update({str(ctx.author.id): thread.id})
@@ -156,9 +157,14 @@ class Modmail(BaseCog):
 
         await ctx.respond("Session started!")
 
-    @_rm.command(name="end", description="Ends a modmail session.")
+    @commands.slash_command(name="end", description="Ends a modmail session.")
     @commands.dm_only()
-    async def _rm_end(self, ctx: ApplicationContext):
+    async def end(self, ctx: ApplicationContext):
+        """
+        Ends an active modmail thread.
+
+        """
+
         if str(ctx.author.id) not in self.cache["userThreads"]:
             await ctx.respond("No session found.")
 

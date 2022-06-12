@@ -1,7 +1,7 @@
 import os
 import discord
 from discord.ext import commands
-from discord import ApplicationContext, Interaction, Permissions
+from discord import ApplicationContext, Colour, Interaction, Permissions
 from discord.ui import View, Select
 
 from datetime import datetime
@@ -55,12 +55,6 @@ class Moderation(BaseCog):
         }
     }
 
-    def __init__(self, bot) -> None:
-        super().__init__(bot)
-
-    async def load_cache(self):
-        await super().load_cache()
-
     async def after_load(self):
         for key, value in list(self.cache["unbanQueue"].items()):
             await self._unban(key, value)
@@ -71,14 +65,19 @@ class Moderation(BaseCog):
     # @discord.default_permissions(ban_members=True)
 
     async def get_member_ids(self, ids):
+        """
+        Gets the IDs of members.
+
+        """
+
         regex = r"\d{18}"
 
         return re.findall(regex, ids)
 
 #----------------------------------------ban and unbans----------------------------------------#
 
-    @commands.slash_command(name="ban", description="Bans a member")
-    @checks.has_permissions(PermissionLevel.OWNER)
+    @commands.slash_command(name="ban", description="Bans a member", default_member_permissions=Permissions(ban_members=True))
+    @checks.has_permissions(PermissionLevel.MOD)
     async def ban(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to ban."),
                   duration: discord.Option(str, description="How long to ban the member for. Leave blank to permenantly ban.", default="inf"),
                   reason: discord.Option(str, description="Reason for ban.", default="No reason given.")):
@@ -94,7 +93,7 @@ class Moderation(BaseCog):
             try:
                 await after.convert(duration)
             except Exception as e:
-                embed = discord.Embed(title="Error", description=e)
+                embed = discord.Embed(title="Error", description=e, colour=Colour.red())
                 await ctx.respond(embed=embed)
 
                 return
@@ -103,7 +102,7 @@ class Moderation(BaseCog):
 
         if len(member_ids) == 0:
             embed = discord.Embed(
-                title="Error", description="No valid member IDs provided.")
+                title="Error", description="No valid member IDs provided.", colour=Colour.red())
             await ctx.respond(embed=embed)
 
             return
@@ -146,11 +145,11 @@ class Moderation(BaseCog):
             description += f"\nUnbanning at <t:{round(after.dt.timestamp())}:F>.\n"
 
         embed = discord.Embed(
-            title="Report", description=description)
+            title="Report", description=description, colour=Colour.blue())
         await ctx.respond(embed=embed)
 
-    @commands.slash_command(name="unban", description="Unbans a member")
-    @checks.has_permissions(PermissionLevel.OWNER)
+    @commands.slash_command(name="unban", description="Unbans a member", default_member_permissions=Permissions(ban_members=True))
+    @checks.has_permissions(PermissionLevel.MOD)
     async def unban(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to unban."),
                     reason: discord.Option(str, description="Reason for unban.", default="No reason given.")):
         """
@@ -162,7 +161,7 @@ class Moderation(BaseCog):
 
         if len(member_ids) == 0:
             embed = discord.Embed(
-                title="Error", description="No valid member IDs provided.")
+                title="Error", description="No valid member IDs provided.", colour=Colour.red())
             await ctx.respond(embed=embed)
 
             return
@@ -196,10 +195,15 @@ class Moderation(BaseCog):
         await self.update_db()
 
         embed = discord.Embed(
-            title="Report", description=description)
+            title="Report", description=description, colour=Colour.blue())
         await ctx.respond(embed=embed)
 
     async def _unban(self, member, time):
+        """
+        Handles unban logic depending on time left.
+
+        """
+
         now = datetime.utcnow()
         closetime = (time - now).total_seconds() if time else 0
 
@@ -208,7 +212,7 @@ class Moderation(BaseCog):
         else:
             await self._unban_helper(member)
 
-    def _unban_after(self, member):  # bruh async stuff
+    def _unban_after(self, member):
         return self.bot.loop.create_task(self._unban_helper(member))
 
     async def _unban_helper(self, member_id):
@@ -225,8 +229,8 @@ class Moderation(BaseCog):
         self.cache["unbanQueue"].pop(member_id)
         await self.update_db()
 
-    @commands.slash_command(name="bans", description="Lists all bans and unbans for a member.")
-    @checks.has_permissions(PermissionLevel.OWNER)
+    @commands.slash_command(name="bans", description="Lists all bans and unbans for a member.", default_member_permissions=Permissions(manage_messages=True))
+    @checks.has_permissions(PermissionLevel.TRIAL_MOD)
     async def bans(self, ctx: ApplicationContext, member: discord.Option(discord.Member, description="The members you want to get bans.")):
         """
         Lists all the bans and unbans for a member
@@ -237,7 +241,7 @@ class Moderation(BaseCog):
 
         if member_id not in self.cache["bans"]:
             embed = discord.Embed(
-                title=f"{member.name}#{member.discriminator} ({member.id})", description="This user has not been banned.")
+                title=f"{member.name}#{member.discriminator} ({member.id})", description="This user has not been banned.", colour=Colour.red())
             await ctx.respond(embed=embed)
             return
 
@@ -260,14 +264,15 @@ class Moderation(BaseCog):
             description = "This user has not been banned."
 
         embed = discord.Embed(
-            title=f"{member.name} ({member.id})", description=description)
+            title=f"{member.name} ({member.id})", description=description, colour=Colour.blue())
         await ctx.respond(embed=embed)
 
 
 #----------------------------------------kicks----------------------------------------#
 
-    @commands.slash_command(name="kick", description="Kicks a member")
-    @checks.has_permissions(PermissionLevel.OWNER)
+
+    @commands.slash_command(name="kick", description="Kicks a member", default_member_permissions=Permissions(kick_members=True))
+    @checks.has_permissions(PermissionLevel.TRIAL_MOD)
     async def kick(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to kick."),
                    reason: discord.Option(str, description="Reason for kick.", default="No reason given.")):
         """
@@ -279,7 +284,7 @@ class Moderation(BaseCog):
 
         if len(member_ids) == 0:
             embed = discord.Embed(
-                title="Error", description="No valid member IDs provided.")
+                title="Error", description="No valid member IDs provided.", colour=Colour.red())
             await ctx.respond(embed=embed)
 
             return
@@ -315,14 +320,14 @@ class Moderation(BaseCog):
         await self.update_db()
 
         embed = discord.Embed(
-            title="Report", description=description)
+            title="Report", description=description, colour=Colour.blue())
         await ctx.respond(embed=embed)
 
-    @commands.slash_command(name="kicks", description="Lists all kicks for a member.")
-    @checks.has_permissions(PermissionLevel.OWNER)
+    @commands.slash_command(name="kicks", description="Lists all kicks for a member.", default_member_permissions=Permissions(manage_messages=True))
+    @checks.has_permissions(PermissionLevel.TRIAL_MOD)
     async def kicks(self, ctx: ApplicationContext, member: discord.Option(discord.Member, description="The members you want to get bans.")):
         """
-        Lists all the kicks for a member
+        Lists all the kicks for a member.
 
         """
 
@@ -330,7 +335,7 @@ class Moderation(BaseCog):
 
         if member_id not in self.cache["kicks"]:
             embed = discord.Embed(
-                title=f"{member.name} ({member.id})", description="This user has not been kicked.")
+                title=f"{member.name} ({member.id})", description="This user has not been kicked.", colour=Colour.red())
             await ctx.respond(embed=embed)
             return
 
@@ -346,13 +351,13 @@ class Moderation(BaseCog):
             description = "This user not been kicked."
 
         embed = discord.Embed(
-            title=f"{member.name} ({member.id})", description=description)
+            title=f"{member.name} ({member.id})", description=description, colour=Colour.blue())
         await ctx.respond(embed=embed)
 
 #----------------------------------------Mute and Unmute----------------------------------------#
 
-    @commands.slash_command(name="setmute", description="Sets the mute role.")
-    @checks.has_permissions(PermissionLevel.OWNER)
+    @commands.slash_command(name="setmute", description="Sets the mute role.", default_member_permissions=Permissions(manage_channels=True))
+    @checks.has_permissions(PermissionLevel.ADMINISTRATOR)
     async def setmute(self, ctx: ApplicationContext, role: discord.Option(discord.Role, description="mute role")):
         """
         Sets the mute role via /mute [role]
@@ -361,7 +366,7 @@ class Moderation(BaseCog):
 
         if await self.guild._fetch_role(role.id) == None:
             embed = discord.Embed(
-                title="Success", description=f"Role was not found in the guild.")
+                title="Success", description=f"Role was not found in the guild.", colour=Colour.green())
             await ctx.respond(embed=embed)
 
             return
@@ -370,11 +375,11 @@ class Moderation(BaseCog):
         await self.update_db()
 
         embed = discord.Embed(
-            title="Success", description=f"Successfully set the mute role as {role.mention}")
+            title="Success", description=f"Successfully set the mute role as {role.mention}", colour=Colour.green())
         await ctx.respond(embed=embed)
 
-    @commands.slash_command(name="mute", description="Mutes a member")
-    @checks.has_permissions(PermissionLevel.OWNER)
+    @commands.slash_command(name="mute", description="Mutes a member", default_member_permissions=Permissions(manage_messages=True))
+    @checks.has_permissions(PermissionLevel.TRIAL_MOD)
     async def mute(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to mute."),
                    duration: discord.Option(str, description="How long to mute the member for. Leave blank to permenant.", default="inf"),
                    reason: discord.Option(str, description="Reason for mute.", default="No reason given.")):
@@ -385,7 +390,7 @@ class Moderation(BaseCog):
 
         if not self.cache["muteRole"]:
             embed = discord.Embed(
-                title="Error", description="Please set a mute role first by running `/setmute [role]`")
+                title="Error", description="Please set a mute role first by running `/setmute [role]`", colour=Colour.red())
             await ctx.respond(embed=embed)
 
             return
@@ -397,7 +402,7 @@ class Moderation(BaseCog):
             try:
                 await after.convert(duration)
             except Exception as e:
-                embed = discord.Embed(title="Error", description=e)
+                embed = discord.Embed(title="Error", description=e, colour=Colour.red())
                 await ctx.respond(embed=embed)
 
                 return
@@ -406,12 +411,12 @@ class Moderation(BaseCog):
 
         if len(member_ids) == 0:
             embed = discord.Embed(
-                title="Error", description="No valid member IDs provided.")
+                title="Error", description="No valid member IDs provided.", colour=Colour.red())
             await ctx.respond(embed=embed)
 
             return
 
-        mute_role = self.guild._fetch_role(self.cache["muteRole"])
+        mute_role = await self.guild._fetch_role(self.cache["muteRole"])
 
         description = ""
         for member_id in member_ids:
@@ -458,11 +463,11 @@ class Moderation(BaseCog):
             description += f"Unmuting at <t:{round(after.dt.timestamp())}:F>.\n"
 
         embed = discord.Embed(
-            title="Report", description=description)
+            title="Report", description=description, colour=Colour.blue())
         await ctx.respond(embed=embed)
 
-    @commands.slash_command(name="unmute", description="Unmutes a member.")
-    @checks.has_permissions(PermissionLevel.OWNER)
+    @commands.slash_command(name="unmute", description="Unmutes a member.", default_member_permissions=Permissions(manage_messages=True))
+    @checks.has_permissions(PermissionLevel.TRIAL_MOD)
     async def unmute(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to unmute."),
                      reason: discord.Option(str, description="Reason for unmute.", default="No reason given.")):
         """
@@ -479,7 +484,7 @@ class Moderation(BaseCog):
 
             return
 
-        mute_role = self.guild._fetch_role(self.cache["muteRole"])
+        mute_role = await self.guild._fetch_role(self.cache["muteRole"])
 
         description = ""
         for member_id in member_ids:
@@ -489,12 +494,12 @@ class Moderation(BaseCog):
                 description += f"The member with ID `{member_id}` was not found.\n"
                 continue
 
-            if mute_role.id not in member.roles:
+            if mute_role not in member.roles:
                 description += f"The member with ID `{member_id}` is not muted.\n"
                 continue
 
             try:
-                roles = [await self.guild._fetch_role(role.id) for role in member.roles]
+                roles = [await self.guild._fetch_role(role_id) for role_id in self.cache["mutes"][member_id][-1]["roles"]]
                 await member.edit(roles=roles)
 
                 description += f"The member {member.mention} `{member.name}#{member.discriminator}` has been successfully unmuted."
@@ -516,10 +521,15 @@ class Moderation(BaseCog):
         await self.update_db()
 
         embed = discord.Embed(
-            title="Report", description=description)
+            title="Report", description=description, colour=Colour.blue())
         await ctx.respond(embed=embed)
 
     async def _unmute(self, member, time):
+        """
+        Handles unmute logic depending on time left.
+
+        """
+
         now = datetime.utcnow()
         closetime = (time - now).total_seconds() if time else 0
 
@@ -547,8 +557,8 @@ class Moderation(BaseCog):
         self.cache["unmuteQueue"].pop(member_id)
         await self.update_db()
 
-    @commands.slash_command(name="mutes", description="Lists all mutes and unmutes for a member.")
-    @checks.has_permissions(PermissionLevel.OWNER)
+    @commands.slash_command(name="mutes", description="Lists all mutes and unmutes for a member.", default_member_permissions=Permissions(manage_messages=True))
+    @checks.has_permissions(PermissionLevel.TRIAL_MOD)
     async def mutes(self, ctx: ApplicationContext, member: discord.Option(discord.Member, description="The members you want to get mute history.")):
         """
         Lists all the mutes and unmutes for a member
@@ -559,7 +569,7 @@ class Moderation(BaseCog):
 
         if member_id not in self.cache["mutes"]:
             embed = discord.Embed(
-                title=f"{member.name} ({member.id})", description="This user has not been muted.")
+                title=f"{member.name} ({member.id})", description="This user has not been muted.", colour=Colour.red())
             await ctx.respond(embed=embed)
             return
 
@@ -582,13 +592,13 @@ class Moderation(BaseCog):
             description = "This user has not been muted."
 
         embed = discord.Embed(
-            title=f"{member.name} ({member.id})", description=description)
+            title=f"{member.name} ({member.id})", description=description, colour=Colour.blue())
         await ctx.respond(embed=embed)
 
 #----------------------------------------Warn----------------------------------------#
 
-    @commands.slash_command(name="warn", description="Warns a member.")
-    @checks.has_permissions(PermissionLevel.OWNER)
+    @commands.slash_command(name="warn", description="Warns a member.", default_member_permissions=Permissions(manage_messages=True))
+    @checks.has_permissions(PermissionLevel.TRIAL_MOD)
     async def warn(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to warn."),
                    reason: discord.Option(str, description="Warn reason.", default="No reason given.")):
         """
@@ -600,7 +610,7 @@ class Moderation(BaseCog):
 
         if len(member_ids) == 0:
             embed = discord.Embed(
-                title="Error", description="No valid member IDs provided.")
+                title="Error", description="No valid member IDs provided.", colour=Colour.red())
             await ctx.respond(embed=embed)
 
             return
@@ -631,11 +641,11 @@ class Moderation(BaseCog):
         await self.update_db()
 
         embed = discord.Embed(
-            title="Report", description=description)
+            title="Report", description=description, colour=Colour.blue())
         await ctx.respond(embed=embed)
 
-    @commands.slash_command(name="pardon", description="Pardons a warn")
-    @checks.has_permissions(PermissionLevel.OWNER)
+    @commands.slash_command(name="pardon", description="Pardons a warn", default_member_permissions=Permissions(manage_messages=True))
+    @checks.has_permissions(PermissionLevel.TRIAL_MOD)
     async def pardon(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to pardon warns for."),
                      reason: discord.Option(str, description="Warn reason.", default="No reason given.")):
         """
@@ -647,7 +657,7 @@ class Moderation(BaseCog):
 
         if len(member_ids) == 0:
             embed = discord.Embed(
-                title="Error", description="No valid member IDs provided.")
+                title="Error", description="No valid member IDs provided.", colour=Colour.red())
             await ctx.respond(embed=embed)
 
             return
@@ -655,10 +665,10 @@ class Moderation(BaseCog):
         async def _warns_callback(interaction: Interaction):
             warn_select.values.sort(reverse=True)
             for value in warn_select.values:
-                self.cache["warns"][str(member_id)].pop(int(value))
+                self.cache["pardons"].setdefault(str(member_id), []).append(
+                    {"responsible": ctx.author.id, "reason": reason, "time": datetime.now().timestamp(), "warn": self.cache["warns"][str(member_id)][int(value)]})
 
-            self.cache["pardons"].setdefault(str(member_id), []).append(
-                {"responsible": ctx.author.id, "reason": reason, "time": datetime.now().timestamp()})
+                self.cache["warns"][str(member_id)].pop(int(value))
 
             self.bot.dispatch("member_pardon", ModContext(
                 member=member, moderator=ctx.author, reason=reason, timestamp=datetime.now().timestamp()))
@@ -668,7 +678,7 @@ class Moderation(BaseCog):
             warn_view.stop()
 
         embed = discord.Embed(
-            title="Warns", description="Fetching warns...")
+            title="Warns", description="Fetching warns...", colour=Colour.blue())
         await ctx.respond(embed=embed)
 
         for member_id in member_ids:
@@ -684,7 +694,7 @@ class Moderation(BaseCog):
             warn_view = View(warn_select)
 
             embed.description = f"**{member.name}#{member.discriminator}**\n"
-            embed.description += "".join([f"Responsible: <@{warn['responsible']}> Reason: {warn['reason'] if not '' else 'No reason given'}"
+            embed.description += "".join([f"Responsible: <@{warn['responsible']}> Reason: {warn['reason'] if not '' else 'No reason given'}\n\n"
                                           for warn in self.cache["warns"][str(member_id)]])
 
             await ctx.interaction.edit_original_message(embed=embed, view=warn_view)
@@ -695,8 +705,8 @@ class Moderation(BaseCog):
 
         await ctx.delete()
 
-    @commands.slash_command(name="warns", description="Lists all warns for a member.")
-    @checks.has_permissions(PermissionLevel.OWNER)
+    @commands.slash_command(name="warns", description="Lists all warns for a member.", default_member_permissions=Permissions(manage_messages=True))
+    @checks.has_permissions(PermissionLevel.TRIAL_MOD)
     async def warns(self, ctx: ApplicationContext, member: discord.Option(discord.Member, description="The members you want to get warns for.")):
         """
         Lists all the warns for a member
@@ -707,7 +717,7 @@ class Moderation(BaseCog):
 
         if member_id not in self.cache["warns"]:
             embed = discord.Embed(
-                title=f"{member.name} ({member.id})", description="This user has no warns")
+                title=f"{member.name} ({member.id})", description="This user has no warns", colour=Colour.red())
             await ctx.respond(embed=embed)
 
             return
@@ -716,24 +726,35 @@ class Moderation(BaseCog):
         if member_id in self.cache["pardons"]:
             actions.extend(self.cache["pardons"][member_id])
 
-        actions = sorted(actions, key=lambda d: d['time'])
+        actions = sorted(actions, key=lambda d: d["time"])
 
         description = ""
         for action in actions:
+            if "warn" in action:
+                description += "**Pardon**\n"
+            else:
+                description += "**Warn**\n"
+
             moderator = await self.bot.fetch_user(action["responsible"])
-            description += f'Moderator: {moderator.mention} ({action["responsible"]}) \n Reason: {action["reason"]} \n Date: <t:{round(action["time"])}:F> \n\n'
+            description += f"Moderator: {moderator.mention} ({action['responsible']}) \n Reason: {action['reason']} \n Date: <t:{round(action['time'])}:F>\n"
+
+            if "warn" in action:
+                moderator = await self.bot.fetch_user(action["warn"]["responsible"])
+                description += f"**Pardoned warn**\nModerator: {moderator.mention} ({action['warn']['responsible']}) \n Reason: {action['warn']['reason']} \n Date: <t:{round(action['warn']['time'])}:F>\n"
+
+            description += "\n"
 
         if not description:
             description = "This user has no warns."
 
         embed = discord.Embed(
-            title=f"{member.name} ({member.id})", description=description)
+            title=f"{member.name} ({member.id})", description=description, colour=Colour.blue())
         await ctx.respond(embed=embed)
 
 #----------------------------------------Note----------------------------------------#
 
-    @commands.slash_command(name="note", description="Write a note about a member")
-    @checks.has_permissions(PermissionLevel.OWNER)
+    @commands.slash_command(name="note", description="Write a note about a member", default_member_permissions=Permissions(manage_messages=True))
+    @checks.has_permissions(PermissionLevel.TRIAL_MOD)
     async def note(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to write a note about."),
                    note: discord.Option(str, description="Note")):
         """
@@ -745,7 +766,7 @@ class Moderation(BaseCog):
 
         if len(member_ids) == 0:
             embed = discord.Embed(
-                title="Error", description="No valid member IDs provided.")
+                title="Error", description="No valid member IDs provided.", colour=Colour.red())
             await ctx.respond(embed=embed)
 
             return
@@ -766,11 +787,11 @@ class Moderation(BaseCog):
         await self.update_db()
 
         embed = discord.Embed(
-            title="Report", description=description)
+            title="Report", description=description, colour=Colour.blue())
         await ctx.respond(embed=embed)
 
-    @commands.slash_command(name="omit", description="Deletes a note")
-    @checks.has_permissions(PermissionLevel.OWNER)
+    @commands.slash_command(name="omit", description="Deletes a note", default_member_permissions=Permissions(manage_messages=True))
+    @checks.has_permissions(PermissionLevel.TRIAL_MOD)
     async def remove_note(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to omit notes for.")):
         """
         Omits notes for some members via /omit [members]
@@ -781,7 +802,7 @@ class Moderation(BaseCog):
 
         if len(member_ids) == 0:
             embed = discord.Embed(
-                title="Error", description="No valid member IDs provided.")
+                title="Error", description="No valid member IDs provided.", colour=Colour.red())
             await ctx.respond(embed=embed)
 
             return
@@ -796,7 +817,7 @@ class Moderation(BaseCog):
             note_view.stop()
 
         embed = discord.Embed(
-            title="Notes", description="Fetching notes...")
+            title="Notes", description="Fetching notes...", colour=Colour.blue())
         await ctx.respond(embed=embed)
 
         for member_id in member_ids:
@@ -812,7 +833,7 @@ class Moderation(BaseCog):
             note_view = View(note_select)
 
             embed.description = f"**{member.name}#{member.discriminator}**\n"
-            embed.description += "".join([f"Responsible: <@{note['responsible']}> Note: {note['note']}"
+            embed.description += "".join([f"Responsible: <@{note['responsible']}> Note: {note['note']}\n\n"
                                           for note in self.cache["notes"][str(member_id)]])
 
             await ctx.interaction.edit_original_message(embed=embed, view=note_view)
@@ -823,8 +844,8 @@ class Moderation(BaseCog):
 
         await ctx.delete()
 
-    @commands.slash_command(name="notes", description="Lists all notes for a member")
-    @checks.has_permissions(PermissionLevel.OWNER)
+    @commands.slash_command(name="notes", description="Lists all notes for a member", default_member_permissions=Permissions(manage_messages=True))
+    @checks.has_permissions(PermissionLevel.TRIAL_MOD)
     async def notes(self, ctx: ApplicationContext, member: discord.Option(discord.Member, description="The members you want to get notes.")):
         """
         Lists all the notes for a member
@@ -835,7 +856,7 @@ class Moderation(BaseCog):
 
         if member_id not in self.cache["notes"]:
             embed = discord.Embed(
-                title=f"{member.name} ({member.id})", description="This user has no notes")
+                title=f"{member.name} ({member.id})", description="This user has no notes", colour=Colour.red())
             await ctx.respond(embed=embed)
 
             return
@@ -852,13 +873,13 @@ class Moderation(BaseCog):
             description = "This user has no notes."
 
         embed = discord.Embed(
-            title=f"{member.name} ({member.id})", description=description)
+            title=f"{member.name} ({member.id})", description=description, colour=Colour.blue())
         await ctx.respond(embed=embed)
 
 #--------------------------------------------------------------------------------#
 
-    @commands.slash_command(name="slowmode", description="Sets slowmode for a channel.")
-    @checks.has_permissions(PermissionLevel.OWNER)
+    @commands.slash_command(name="slowmode", description="Sets slowmode for a channel.", default_member_permissions=Permissions(manage_channels=True))
+    @checks.has_permissions(PermissionLevel.ADMINISTRATOR)
     async def slowmode(self, ctx: ApplicationContext, channel: discord.Option(discord.TextChannel, description="The channel you want to set slowmode.", default=None), time: discord.Option(str, description="The slowmode time.", default="0s")):
         regex = (r'((?P<hours>-?\d+)h)?'
                  r'((?P<minutes>-?\d+)m)?'
@@ -880,13 +901,13 @@ class Moderation(BaseCog):
 
         if seconds is None:
             embed = discord.Embed(
-                title="Error", description=f"Could not parse time: {time}. Make sure it is in the form []h[]m[]s.")
+                title="Error", description=f"Could not parse time: {time}. Make sure it is in the form []h[]m[]s.", colour=Colour.red())
             await ctx.respond(embed=embed)
             return
 
         if seconds > 21600:
             embed = discord.Embed(
-                title="Error", description=f"Parsed time {seconds}s too large. Maximum slowmode is 6h.")
+                title="Error", description=f"Parsed time {seconds}s too large. Maximum slowmode is 6h.", colour=Colour.red())
             await ctx.respond(embed=embed)
             return
 
@@ -896,11 +917,11 @@ class Moderation(BaseCog):
         await channel.edit(slowmode_delay=seconds)
 
         embed = discord.Embed(
-            title="Success!", description=f"Successfully set slowmode in {channel.mention} to {seconds}s.")
+            title="Success", description=f"Successfully set slowmode in {channel.mention} to {seconds}s.", colour=Colour.green())
         await ctx.respond(embed=embed)
 
     @commands.slash_command(name="bonk", description="Bonk your enemies.", default_member_permissions=Permissions(manage_messages=True))
-    @checks.has_permissions(PermissionLevel.TC_MOD)
+    @checks.has_permissions(PermissionLevel.STAFF)
     async def bonk(self, ctx: ApplicationContext, member: discord.Option(discord.Member, "Member to bonk.")):
         if member.id == 906318377432281088:
             file = discord.File(
@@ -916,7 +937,7 @@ class Moderation(BaseCog):
         await ctx.response.send_message(member.mention, file=file)
 
     @commands.slash_command(name="feet", description="feet", default_member_permissions=Permissions(manage_messages=True))
-    @checks.has_permissions(PermissionLevel.TC_MOD)
+    @checks.has_permissions(PermissionLevel.TRIAL_MOD)
     async def feet(self, ctx: ApplicationContext):
         file = discord.File(
             f"./assets/feet/{random.choice(os.listdir('./assets/feet/'))}")

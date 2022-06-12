@@ -5,7 +5,7 @@ import time
 import discord
 from discord.ext import commands
 
-from discord import ApplicationContext, Colour, Embed, OptionChoice, SlashCommandGroup
+from discord import ApplicationContext, Colour, Embed, OptionChoice, Permissions, SlashCommandGroup
 
 from core import checks
 from core.base_cog import BaseCog
@@ -25,7 +25,32 @@ class Logging(BaseCog):
         "errChannel": None
     }
 
-    _lg = SlashCommandGroup("log", "Contains all the commands for logging.")
+    _lg = SlashCommandGroup("log", "Contains all the commands for logging.",
+                            default_member_permissions=Permissions(manage_messages=True))
+
+    async def fix_embed(self, embed: discord.Embed):
+        """
+        Removes any empty values from embeds.
+
+        """
+
+        fields = deepcopy(embed.fields)
+
+        for field in fields:
+            if field.name == "" or field.value == "":
+                embed.remove_field(embed.fields.index(field))
+
+        if embed.thumbnail == None:
+            embed.remove_thumbnail()
+
+        if embed.author.icon_url == None or embed.author.name == "" or embed.author.name == None:
+            embed.remove_author()
+
+        if embed.footer.icon_url == None or embed.footer.text == "" or embed.footer.text == None:
+            embed.remove_footer()
+
+        if embed.image == None:
+            embed.remove_image()
 
 #--------------------------------------moderation logs---------------------------------------#
 
@@ -40,10 +65,12 @@ class Logging(BaseCog):
 
         if ctx.duration:
             embed.add_field(name="Duration",
-                            value=f"Until <t:{int(ctx.duration)}:F>")
+                            value=f"{'Permanent' if ctx.duration == 'inf' else f'Until <t:{int(ctx.duration)}:F>'}")
 
         if ctx.reason:
             embed.add_field(name="Reason", value=ctx.reason)
+
+        await self.fix_embed(embed)
 
         if self.cache["modChannel"] == None:
             if self.cache["logChannel"] == None:
@@ -56,7 +83,7 @@ class Logging(BaseCog):
 
         chn = await self.guild.fetch_channel(self.cache["modChannel"])
         await chn.send(embed=embed)
-    
+
     @commands.Cog.listener()
     async def on_member_undelete(self, ctx):
         embed = Embed(title="Member unbanned",
@@ -68,6 +95,8 @@ class Logging(BaseCog):
 
         if ctx.reason:
             embed.add_field(name="Reason", value=ctx.reason)
+
+        await self.fix_embed(embed)
 
         if self.cache["modChannel"] == None:
             if self.cache["logChannel"] == None:
@@ -93,6 +122,8 @@ class Logging(BaseCog):
         if ctx.reason:
             embed.add_field(name="Reason", value=ctx.reason)
 
+        await self.fix_embed(embed)
+
         if self.cache["modChannel"] == None:
             if self.cache["logChannel"] == None:
                 return
@@ -116,6 +147,8 @@ class Logging(BaseCog):
 
         if ctx.reason:
             embed.add_field(name="Reason", value=ctx.reason)
+
+        await self.fix_embed(embed)
 
         if self.cache["modChannel"] == None:
             if self.cache["logChannel"] == None:
@@ -141,6 +174,8 @@ class Logging(BaseCog):
         if ctx.reason:
             embed.add_field(name="Reason", value=ctx.reason)
 
+        await self.fix_embed(embed)
+
         if self.cache["modChannel"] == None:
             if self.cache["logChannel"] == None:
                 return
@@ -164,10 +199,12 @@ class Logging(BaseCog):
 
         if ctx.duration:
             embed.add_field(name="Duration",
-                            value=f"Until <t:{int(ctx.duration)}:F>")
+                            value=f"{'Permanent' if ctx.duration == 'inf' else f'Until <t:{int(ctx.duration)}:F>'}")
 
         if ctx.reason:
             embed.add_field(name="Reason", value=ctx.reason)
+
+        await self.fix_embed(embed)
 
         if self.cache["modChannel"] == None:
             if self.cache["logChannel"] == None:
@@ -192,6 +229,8 @@ class Logging(BaseCog):
 
         if ctx.reason:
             embed.add_field(name="Reason", value=ctx.reason)
+
+        await self.fix_embed(embed)
 
         if self.cache["modChannel"] == None:
             if self.cache["logChannel"] == None:
@@ -226,6 +265,8 @@ class Logging(BaseCog):
             name=f"{message.author.name}#{message.author.discriminator}", icon_url=message.author.avatar)
         embed.set_footer(text=message.author.id)
 
+        await self.fix_embed(embed)
+
         if self.cache["msgChannel"] == None:
             if self.cache["logChannel"] == None:
                 return
@@ -253,6 +294,8 @@ class Logging(BaseCog):
             name=f"{before.author.name}#{before.author.discriminator}", icon_url=before.author.avatar)
         embed.set_footer(text=before.author.id)
 
+        await self.fix_embed(embed)
+
         if self.cache["msgChannel"] == None:
             if self.cache["logChannel"] == None:
                 return
@@ -278,12 +321,9 @@ class Logging(BaseCog):
             embed.add_field(name=f"Overwrites for {target.name}", value="".join(
                 [f"**{permission.replace('_', ' ').capitalize()}:** {'🟩' if value else '🟥'}\n" if value != None else "" for permission, value in channel.overwrites[target]]), inline=False)
 
-        fields = deepcopy(embed.fields)
-        for field in fields:
-            if field.value == "":
-                embed.fields.remove(field)
-
         embed.set_footer(text=channel.id)
+
+        await self.fix_embed(embed)
 
         if self.cache["srvChannel"] == None:
             if self.cache["logChannel"] == None:
@@ -305,6 +345,8 @@ class Logging(BaseCog):
                               timestamp=datetime.now(), colour=Colour.red())
 
         embed.set_footer(text=channel.id)
+
+        await self.fix_embed(embed)
 
         if self.cache["srvChannel"] == None:
             if self.cache["logChannel"] == None:
@@ -359,6 +401,8 @@ class Logging(BaseCog):
 
         embed.set_footer(text=before.id)
 
+        await self.fix_embed(embed)
+
         if self.cache["srvChannel"] == None:
             if self.cache["logChannel"] == None:
                 return
@@ -382,6 +426,8 @@ class Logging(BaseCog):
 
         embed.set_footer(text=role.id)
 
+        await self.fix_embed(embed)
+
         if self.cache["srvChannel"] == None:
             if self.cache["logChannel"] == None:
                 return
@@ -402,6 +448,8 @@ class Logging(BaseCog):
                               timestamp=datetime.now(), colour=Colour.red())
 
         embed.set_footer(text=role.id)
+
+        await self.fix_embed(embed)
 
         if self.cache["srvChannel"] == None:
             if self.cache["logChannel"] == None:
@@ -452,6 +500,8 @@ class Logging(BaseCog):
 
         embed.set_footer(text=before.id)
 
+        await self.fix_embed(embed)
+
         if self.cache["srvChannel"] == None:
             if self.cache["logChannel"] == None:
                 return
@@ -484,6 +534,8 @@ class Logging(BaseCog):
             name=f"{member.name}#{member.discriminator}", icon_url=member.avatar)
         embed.set_footer(text=member.id)
 
+        await self.fix_embed(embed)
+
         if self.cache["jlvChannel"] == None:
             if self.cache["logChannel"] == None:
                 return
@@ -508,6 +560,8 @@ class Logging(BaseCog):
         embed.set_author(
             name=f"{member.name}#{member.discriminator}", icon_url=member.avatar)
         embed.set_footer(text=member.id)
+
+        await self.fix_embed(embed)
 
         if self.cache["jlvChannel"] == None:
             if self.cache["logChannel"] == None:
@@ -562,6 +616,8 @@ class Logging(BaseCog):
 
         embed.set_footer(text=before.id)
 
+        await self.fix_embed(embed)
+
         if self.cache["mbrChannel"] == None:
             if self.cache["logChannel"] == None:
                 return
@@ -605,6 +661,8 @@ class Logging(BaseCog):
 
         embed.set_footer(text=before.id)
 
+        await self.fix_embed(embed)
+
         if self.cache["mbrChannel"] == None:
             if self.cache["logChannel"] == None:
                 return
@@ -622,12 +680,13 @@ class Logging(BaseCog):
 
     @commands.Cog.listener()
     async def on_error(self, exception: Exception, hint: str = "", suggestion: str = ""):
-
-        embed = discord.Embed(title="Error")
+        embed = discord.Embed(title="Error", colour=Colour.red())
 
         embed.add_field(name="Exception", value=f"`{exception}`", inline=False)
         embed.add_field(
             name="Traceback", value=f"`{''.join(tb.format_exception(type(exception), exception, exception.__traceback__))}`", inline=False)
+
+        await self.fix_embed(embed)
 
         if hint != "":
             embed.add_field(name="Hint", value=hint, inline=False)
@@ -650,15 +709,19 @@ class Logging(BaseCog):
 
     @commands.Cog.listener()
     async def on_application_command_error(self, ctx: discord.ApplicationContext, exception: discord.DiscordException):
-
         embed = discord.Embed(
             title="Error",
-            description=f"It seems an error has occured.\nError:`{exception}`\nIf you believe this to be a bug please report it to the technical mod team.")
-        
-        await ctx.response.defer()
-        await ctx.respond(embed=embed)
+            description=f"It seems an error has occured.\nError:`{exception}`\nIf you believe this to be a bug please report it to the technical mod team.", colour=Colour.red())
+
+        try:
+            await ctx.respond(embed=embed, ephemeral=True)
+        except Exception as e:
+            self.bot.dispatch("error", e, f"Seems like `{e}` prevented us from showing `{exception}`.",
+                              "A command was probably used in a place the bot cannot access.")
 
         embed.description = f"Command `{ctx.command}` has raised an error.\nError with traceback\n`{''.join(tb.format_exception(None, exception, exception.__traceback__))}`"
+
+        await self.fix_embed(embed)
 
         if self.cache["errChannel"] == None:
             if self.cache["logChannel"] == None:
@@ -683,7 +746,7 @@ class Logging(BaseCog):
                       channel: discord.Option(discord.TextChannel, "The channel id you want to set the channel as.")):
         if await self.guild.fetch_channel(channel.id) == None:
             embed = discord.Embed(
-                title="Error", description="Channel not found in the server.")
+                title="Error", description="Channel not found in the server.", colour=Colour.red())
             await ctx.respond(embed=embed)
 
             return
@@ -702,7 +765,7 @@ class Logging(BaseCog):
         }
 
         embed = discord.Embed(
-            title="Success", description=f"Set {channel_names[log_channel]}logs channel as {channel.mention}.")
+            title="Success", description=f"Set {channel_names[log_channel]}logs channel as {channel.mention}.", colour=Colour.green())
         await ctx.respond(embed=embed)
 
     @ _lg.command(name="clear", description="Clears a logs channel.")
@@ -712,7 +775,7 @@ class Logging(BaseCog):
                                  OptionChoice("Server logs channel", "srvChannel"), OptionChoice("Join/Leave logs channel", "jlvChannel"), OptionChoice("Member logs channel", "mbrChannel")])):
         if self.cache[log_channel] == None:
             embed = discord.Embed(
-                title="Error", description="Channel is not set.")
+                title="Error", description="Channel is not set.", colour=Colour.red())
             await ctx.respond(embed=embed)
 
             return
@@ -734,7 +797,7 @@ class Logging(BaseCog):
         await ctx.respond(embed=embed)
 
     @ _lg.command(name="list", description="Lists the logs channels.")
-    @ checks.has_permissions(PermissionLevel.ADMINISTRATOR)
+    @ checks.has_permissions(PermissionLevel.TRIAL_MOD)
     async def _lg_list(self, ctx: ApplicationContext):
         channel_names = {
             "logChannel": "All ",
@@ -746,7 +809,7 @@ class Logging(BaseCog):
             "errChannel": "Error "
         }
 
-        embed = discord.Embed(title="Logs channels")
+        embed = discord.Embed(title="Logs channels", colour=Colour.blue())
 
         for channel in self.cache:
             if channel == "_id":

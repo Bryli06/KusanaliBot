@@ -1,6 +1,8 @@
 import discord
 from discord.ext import commands
 
+from discord import Colour
+
 from core import checks
 from core.base_cog import BaseCog
 from core.checks import PermissionLevel
@@ -29,8 +31,9 @@ class Salute(BaseCog):
         }
     }
 
-    _slt = discord.SlashCommandGroup(
-        "salute", "Manages all the join/leave events.")
+    _slt = discord.SlashCommandGroup("salute", "Manages all the join/leave events.",
+                                     default_member_permissions=discord.Permissions(manage_messages=True))
+
     _chn = _slt.create_subgroup(
         "channels", "Manages the channels for the join/leave events.")
     _msg = _slt.create_subgroup(
@@ -38,10 +41,12 @@ class Salute(BaseCog):
     _emb = _slt.create_subgroup(
         "embed", "Manages thee embeds for the join/leave events.")
 
-    def __init__(self, bot) -> None:
-        super().__init__(bot)
-
     async def translate_message(self, memeber: discord.Member, message, channel: discord.TextChannel):
+        """
+        Replaces blocks with the appropiate text value.
+        
+        """
+
         blocks = {
             "{user}": memeber.display_name,
             "{mention}": memeber.mention,
@@ -60,6 +65,11 @@ class Salute(BaseCog):
         return message
 
     async def pastebin_to_json(self, url):
+        """
+        Converts a pastebin link to a json for embeds.
+        
+        """
+
         regex = r"(?<=com/)"
         url = re.sub(regex, "raw/", url)
 
@@ -68,6 +78,11 @@ class Salute(BaseCog):
         return json_file
 
     async def json_to_embed(self, json_file):
+        """
+        Converts a json to an embed.
+        
+        """
+
         return discord.Embed.from_dict(json_file)
 
     @commands.Cog.listener()
@@ -111,7 +126,7 @@ class Salute(BaseCog):
             await channel.send(embed=await self.json_to_embed(frw_embed))
 
     @_slt.command(name="test", description="Tests the join/leave events.")
-    @checks.has_permissions(PermissionLevel.OWNER)
+    @checks.has_permissions(PermissionLevel.MOD)
     async def slt_test(self, ctx: discord.ApplicationContext):
         """
         Sends test welcome/farewell messages in the designated channels.
@@ -156,14 +171,12 @@ class Salute(BaseCog):
             await frw_channel.send("No farewell embed set.")
 
         embed = discord.Embed(
-            title="Done!",
-            description="Test has finished"
-        )
+            title="Success", description="Test has finished", colour=Colour.green())
 
         await ctx.respond(embed=embed)
 
     @_chn.command(name="set")
-    @checks.has_permissions(PermissionLevel.OWNER)
+    @checks.has_permissions(PermissionLevel.ADMINISTRATOR)
     async def chn_set(self, ctx,
                       channel: discord.Option
                       (str, "The channel you want to set.",
@@ -179,14 +192,13 @@ class Salute(BaseCog):
         await self.update_db()
 
         embed = discord.Embed(
-            title="Success!",
-            description=f"New {channel} channel set! \n{channel_name.mention}"
-        )
+            title="Success",
+            description=f"New {channel} channel set! \n{channel_name.mention}", colour=Colour.green())
 
         await ctx.respond(embed=embed)
 
     @_chn.command(name="clear", description="Clears the channel of the specified event.")
-    @checks.has_permissions(PermissionLevel.OWNER)
+    @checks.has_permissions(PermissionLevel.ADMINISTRATOR)
     async def chn_clear(self, ctx, channel: discord.Option
                         (str, "The channel you want to set.",
                          choices=[discord.OptionChoice("Welcome Channel", "welcome"),
@@ -207,14 +219,12 @@ class Salute(BaseCog):
         await self.update_db()
 
         embed = discord.Embed(
-            title="Success!",
-            description=f"Channel{'s' if channel == 'both' else ''} cleared!"
-        )
+            title="Success", description=f"Channel{'s' if channel == 'both' else ''} cleared!", colour=Colour.green())
 
         await ctx.respond(embed=embed)
 
     @_chn.command(name="list", description="Lists the channels set.")
-    @checks.has_permissions(PermissionLevel.OWNER)
+    @checks.has_permissions(PermissionLevel.MOD)
     async def chn_list(self, ctx):
         """
         Lists the channels you set for join/leave events.
@@ -225,77 +235,85 @@ class Salute(BaseCog):
         frw_channel = await self.guild.fetch_channel(int(self.cache["channels"]["farewell"]))
 
         embed = discord.Embed(
-            title="Channels",
-            description=f"Welcome channel: {wlc_channel.mention}!\n Farewell channel: {frw_channel.mention}!"
-        )
+            title="Channels", description=f"Welcome channel: {wlc_channel.mention}!\n Farewell channel: {frw_channel.mention}!", colour=Colour.blue())
 
         await ctx.respond(embed=embed)
 
     @_msg.command(name="set", description="Sets the message for the event.")
-    @checks.has_permissions(PermissionLevel.OWNER)
+    @checks.has_permissions(PermissionLevel.ADMINISTRATOR)
     async def _msg_set(self, ctx, event: discord.Option
                        (str, "The event for which you wish to set a message for.",
                         choices=[discord.OptionChoice("Welcome", "welcome"), discord.OptionChoice("Farewell", "farewell")]),
                        message: discord.Option(str, "The message you wish to send on a new event.")):
+        """
+        Sets a new message for a join/leave event.
+        
+        """
+
         self.cache["messages"][event] = message
 
         await self.update_db()
 
         embed = discord.Embed(
-            title="Success",
-            description=f"New {event} event message set."
-        )
+            title="Success", description=f"New {event} event message set.", colour=Colour.green())
 
         await ctx.respond(embed=embed)
 
     @_msg.command(name="clear", description="Clears the message for the event.")
-    @checks.has_permissions(PermissionLevel.OWNER)
+    @checks.has_permissions(PermissionLevel.ADMINISTRATOR)
     async def _msg_clear(self, ctx, event: discord.Option
                          (str, "The event for which you wish to set a message for.",
                           choices=[discord.OptionChoice("Welcome", "welcome"), discord.OptionChoice("Farewell", "farewell")])):
+        """
+        Clears a message for a join/leave event.
+        
+        """
 
         self.cache["messages"][event] = ""
 
         await self.update_db()
 
         embed = discord.Embed(
-            title="Success",
-            description=f"Cleared {event} event message."
-        )
+            title="Success", description=f"Cleared {event} event message.", colour=Colour.green())
 
         await ctx.respond(embed=embed)
 
     @_emb.command(name="set", description="Sets the embed for the event.")
-    @checks.has_permissions(PermissionLevel.OWNER)
+    @checks.has_permissions(PermissionLevel.ADMINISTRATOR)
     async def _emb_set(self, ctx, event: discord.Option
                        (str, "The event for which you wish to set an embed for.",
                         choices=[discord.OptionChoice("Welcome", "welcome"), discord.OptionChoice("Farewell", "farewell")]),
                        embed: discord.Option(str, "The embed url you wish to send on a new event.")):
+        """
+        Sets a new embed for a join/leave event.
+        
+        """
+
         self.cache["embeds"][event] = await self.pastebin_to_json(embed)
 
         await self.update_db()
 
         embed = discord.Embed(
-            title="Success",
-            description=f"New {event} event embed set."
-        )
+            title="Success", description=f"New {event} event embed set.", colour=Colour.green())
 
         await ctx.respond(embed=embed)
 
     @_emb.command(name="clear", description="Clears the embed for the event.")
-    @checks.has_permissions(PermissionLevel.OWNER)
+    @checks.has_permissions(PermissionLevel.ADMINISTRATOR)
     async def _emb_clear(self, ctx, event: discord.Option
                          (str, "The event for which you wish to set an embed for.",
                           choices=[discord.OptionChoice("Welcome", "welcome"), discord.OptionChoice("Farewell", "farewell")])):
+        """
+       Clears an embed for a join/leave event.
+        
+        """
 
         self.cache["embeds"][event] = ""
 
         await self.update_db()
 
         embed = discord.Embed(
-            title="Success",
-            description=f"Cleared {event} event embed."
-        )
+            title="Success", description=f"Cleared {event} event embed.", colour=Colour.green())
 
         await ctx.respond(embed=embed)
 

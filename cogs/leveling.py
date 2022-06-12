@@ -2,6 +2,8 @@ import math
 import discord
 from discord.ext import commands
 
+from discord import Colour, Permissions
+
 from discord.ui import View, Button, Select
 from core.base_cog import BaseCog
 
@@ -28,14 +30,16 @@ class Leveling(BaseCog):
         }
     }
 
-    _lvl = discord.SlashCommandGroup(
-        "level", "Contains command to modify the leveling system.")
-
-    def __init__(self, bot) -> None:
-        super().__init__(bot)
+    _lvl = discord.SlashCommandGroup("level", "Contains command to modify the leveling system.",
+                                     default_member_permissions=Permissions(manage_messages=True))
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
+        """
+        Check if the member that joined had experience previously.
+
+        """
+
         if member.bot:
             return
 
@@ -52,6 +56,11 @@ class Leveling(BaseCog):
 
     @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member):
+        """
+        Move the exp data for the member who left to the outside section. 
+
+        """
+
         if member.bot:
             return
 
@@ -68,6 +77,11 @@ class Leveling(BaseCog):
 
     @commands.Cog.listener()
     async def on_message(self, message):
+        """
+        Increment exp for member if they meet the requirements.
+
+        """
+
         if message.author.bot:
             return
 
@@ -88,9 +102,7 @@ class Leveling(BaseCog):
 
         if str(user.id) not in self.cache["userExpData"]["inside"]:
             embed = discord.Embed(
-                title="User not found",
-                description=f"User {user.mention} was not present in the database."
-            )
+                title="Error", description=f"User {user.mention} was not present in the database.", colour=Colour.red())
 
             await ctx.respond(embed=embed)
             return
@@ -112,7 +124,7 @@ class Leveling(BaseCog):
 
         file = discord.File("./assets/rank.png")
 
-        await ctx.response.send_message(file=file)
+        await ctx.respond(file=file)
 
     @commands.user_command(name="Get user rank")
     @checks.has_permissions(PermissionLevel.REGULAR)
@@ -182,7 +194,7 @@ class Leveling(BaseCog):
         close.callback = _close_callback
 
         async def show_top(page):
-            users_page = 2
+            users_page = 10
 
             start = (page - 1) * users_page
             end = start + users_page
@@ -191,9 +203,7 @@ class Leveling(BaseCog):
 
             if len(cache.keys()) == 0:
                 embed = discord.Embed(
-                    title="No users present in the database",
-                    description="The database is empty."
-                )
+                    title="Error", description="The database is empty.", colour=Colour.red())
 
                 await ctx.interaction.edit_original_message(embed=embed)
                 return
@@ -202,9 +212,7 @@ class Leveling(BaseCog):
 
             if page > pages:
                 embed = discord.Embed(
-                    title="Page was outside range",
-                    description=f"There are only {pages} pages in the leaderboard."
-                )
+                    title="Error", description=f"There are only {pages} pages in the leaderboard.", colour=Colour.red())
 
                 await ctx.interaction.edit_original_message(embed=embed)
                 return
@@ -220,9 +228,7 @@ class Leveling(BaseCog):
                 rank += 1
 
             embed = discord.Embed(
-                title=f"{ctx.guild.name if ctx.guild is not None else 'Unknown'}'s leaderboard",
-                description=description
-            )
+                title=f"{ctx.guild.name if ctx.guild is not None else 'Unknown'}'s leaderboard", description=description, colour=Colour.blue())
 
             embed.set_footer(text=f"{page}/{pages}")
 
@@ -236,8 +242,36 @@ class Leveling(BaseCog):
         await show_top(page)
         await ctx.delete(delay=60)
 
+    @_lvl.command(name="events", description="Lists all the level events.")
+    @checks.has_permissions(PermissionLevel.TRIAL_MOD)
+    async def level_events(self, ctx):
+        """
+        Lists all the level events set up.
+
+        """
+
+        if len(self.cache["levelEvents"].keys()) == 0:
+            embed = discord.Embed(
+                title="Error", description="There were no level events in the database.", colour=Colour.red())
+
+            await ctx.respond(embed=embed)
+            return
+
+        embed = discord.Embed(title="Level events list", colour=Colour.blue())
+
+        for level in self.cache["levelEvents"]:
+            value = ""
+            for level_event in self.cache["levelEvents"][level]:
+                value += f"{level_event['action']} <@&{level_event['role']}>\n"
+
+            embed.add_field(
+                name=f"Level {level} events:", value="No level events." if value == "" else value, inline=False)
+
+        await ctx.respond(embed=embed)
+
     @_lvl.command(name="set", description="Sets the exp of the user to a specified value.")
-    @checks.has_permissions(PermissionLevel.OWNER)
+    @discord.default_permissions(manage_channels=True)
+    @checks.has_permissions(PermissionLevel.ADMINISTRATOR)
     async def _lvl_set(self, ctx,
                        user: discord.Option(discord.User, "The user whose level you wish to change."),
                        mode: discord.Option(str, "How you wish to set the exp",
@@ -246,40 +280,46 @@ class Leveling(BaseCog):
         """
         Sets the exp of a user.
 
+        There are two modes depending on how you want to change the exp.
+
         """
 
         if str(user.id) not in self.cache["userExpData"]["inside"]:
             embed = discord.Embed(
-                title="User not found",
-                description=f"User {user.mention} was not present in the database."
-            )
+                title="Error", description=f"User {user.mention} was not present in the database.", colour=Colour.red())
 
             await ctx.respond(embed=embed)
             return
 
         self.cache["userExpData"]["inside"][str(
-            user.id)] = amount if mode == "exp" else calculate_level.equation(amount)
+            user.id)] = amount if mode == "exp" else calculate_level.equation(amount - 1) if amount != 0 else 0
 
         await self.update_db()
 
+        exp = self.cache["userExpData"]["inside"][str(user.id)]
+        level = calculate_level.inverse(amount) if mode == 'exp' else amount
+
         embed = discord.Embed(
-            title="Success!",
-            description=f"{user.mention}'s exp was set to {amount if mode == 'exp' else calculate_level.equation(amount)}, new level is {calculate_level.inverse(amount)}."
-        )
+            title="Success", description=f"{user.mention}'s exp was set to {exp}, new level is {level}.", colour=Colour.green())
 
         await ctx.respond(embed=embed)
 
     @_lvl.command(name="add", description="Adds a new event associated with a level.")
-    @checks.has_permissions(PermissionLevel.OWNER)
+    @checks.has_permissions(PermissionLevel.ADMINISTRATOR)
     async def _lvl_add(self, ctx, level: discord.Option(int, "The level in which the level role is.", min_value=1),
                        action: discord.Option(str, "The action you wish to take on hitting that level.",
                        choices=[discord.OptionChoice("Add role", "add"), discord.OptionChoice("Remove role", "remove")])):
+        """
+        Adds level events, level events can either add a role to a user, or remove it.
+
+        """
+
         if str(level) not in self.cache["levelEvents"]:
             self.cache["levelEvents"].update({str(level): []})
 
         if len(self.bot.config["levelRoles"]) == 0:
             embed = discord.Embed(
-                title="Error", description="No level roles found.")
+                title="Error", description="No level roles found.", colour=Colour.red())
             await ctx.respond(embed=embed)
 
             return
@@ -312,9 +352,7 @@ class Leveling(BaseCog):
                     {"role": int(role_id), "action": action})
 
             embed = discord.Embed(
-                title="Report",
-                description=description
-            )
+                title="Report", description=description, colour=Colour.blue())
 
             await self.update_db()
             await interaction.response.send_message(embed=embed)
@@ -325,22 +363,25 @@ class Leveling(BaseCog):
         await ctx.respond(view=roles_view, ephemeral=True)
 
     @_lvl.command(name="remove", description="Removes an event associated with a level.")
-    @checks.has_permissions(PermissionLevel.OWNER)
+    @checks.has_permissions(PermissionLevel.ADMINISTRATOR)
     async def _lvl_remove(self, ctx, level: discord.Option(int, "The level in which the level role is.", min_value=1),
                           action: discord.Option(str, "The action you wish to take on hitting that level.",
                           choices=[discord.OptionChoice("Add role", "add"), discord.OptionChoice("Remove role", "remove")])):
+        """
+        Removes an existing level event.
+
+        """
+
         if str(level) not in self.cache["levelEvents"]:
             embed = discord.Embed(
-                title="Error",
-                description=f"The level was not found in the database."
-            )
+                title="Error", description=f"The level was not found in the database.", colour=Colour.red())
 
             await ctx.respond(embed=embed)
             return
 
         if len(self.bot.config["levelRoles"]) == 0:
             embed = discord.Embed(
-                title="Error", description="No level roles found.")
+                title="Error", description="No level roles found.", colour=Colour.red())
             await ctx.respond(embed=embed)
 
             return
@@ -373,9 +414,7 @@ class Leveling(BaseCog):
                 description += f"Level {level} event {action} <@&{role_id}> was not found in the database.\n"
 
             embed = discord.Embed(
-                title="Report",
-                description=description
-            )
+                title="Report", description=description, colour=Colour.blue())
 
             await self.update_db()
             await interaction.response.send_message(embed=embed)
@@ -385,31 +424,12 @@ class Leveling(BaseCog):
         roles_view = View(level_roles)
         await ctx.respond(view=roles_view, ephemeral=True)
 
-    @_lvl.command(name="list", description="Lists all the level events.")
-    @checks.has_permissions(PermissionLevel.ADMINISTRATOR)
-    async def _lvl_list(self, ctx):
-        if len(self.cache["levelEvents"].keys()) == 0:
-            embed = discord.Embed(
-                title="No level events found",
-                description="There were no level events in the database."
-            )
-
-            await ctx.respond(embed=embed)
-            return
-
-        embed = discord.Embed(title="Level events list")
-
-        for level in self.cache["levelEvents"]:
-            value = ""
-            for level_event in self.cache["levelEvents"][level]:
-                value += f"{level_event['action']} <@&{level_event['role']}>\n"
-
-            embed.add_field(
-                name=f"Level {level} events:", value="No level events." if value == "" else value, inline=False)
-
-        await ctx.respond(embed=embed)
-
     async def update_exp(self, channel, user):
+        """
+        Checks if the user is eligible to get exp.
+
+        """
+
         messages = (await channel.history(limit=10).flatten())[1:]
 
         for message in messages:
@@ -420,6 +440,11 @@ class Leveling(BaseCog):
                 return
 
     async def add_exp(self, user: discord.Member):
+        """
+        Adds exp to the member, if the member reaches a new level it checks if there are any level events available for that level.
+
+        """
+
         if str(user.id) not in self.cache["userExpData"]["inside"]:
             self.cache["userExpData"]["inside"].update(
                 {str(user.id): self.exp_given})

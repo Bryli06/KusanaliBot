@@ -2,8 +2,7 @@ import asyncio
 
 import discord
 from discord.ext import commands
-from discord import ApplicationContext
-from discord import SlashCommandGroup
+from discord import ApplicationContext, Colour, Permissions, SlashCommandGroup
 
 from datetime import datetime
 from dateutil import relativedelta
@@ -15,34 +14,27 @@ from core.base_cog import BaseCog
 
 from PIL import Image, ImageFont, ImageDraw
 
-import traceback
 
 class Countdown(BaseCog):
     _id = "countdown"
-    
-    kusanaliDrop = 1664002800
+
+    kusanali_drop = 1664002800
 
     default_cache = {
-        "countdowns": { 
-            
+        "countdowns": {
+
         },
     }
-    
-    _cd = SlashCommandGroup("countdown", "Manages countdown channels.")
-    
-    def __init__(self, bot) -> None:
-        super().__init__(bot)
-    
-    async def load_cache(self):
-        await super().load_cache()
+
+    _cd = SlashCommandGroup("countdown", "Manages countdown channels.", default_member_permissions=Permissions(manage_messages=True))
 
     async def after_load(self):
         for k, v in list(self.cache["countdowns"].items()):
-            self.bot.loop.create_task(self.start_countdown(k))
-    
+            await self.start_countdown(k)
 
     async def start_countdown(self, channelId):
         channel = self.bot.get_channel(int(channelId))
+
         if not channel:
             self.cache["countdowns"].pop(str(channelId))
             await self.update_db()
@@ -104,7 +96,7 @@ class Countdown(BaseCog):
         elif seconds:
             await channel.edit(name=f"{name}: A few seconds")
             await asyncio.sleep(seconds)
-        
+
         else:
             await channel.edit(name=name)
             return False
@@ -115,32 +107,36 @@ class Countdown(BaseCog):
     async def create(self, ctx: ApplicationContext, name: discord.Option(str, description="Message you would like to count down"), time: discord.Option(str, description="How long the countdown is")):
         after = UserFriendlyTime()
         await after.convert(time)
-        
+
         if after.dt <= datetime.utcnow():
-            embed = discord.Embed(title="Error", description="Invalid time provided")
+            embed = discord.Embed(
+                title="Error", description="Invalid time provided.", colour=Colour.red())
             await ctx.respond(embed=embed)
             return
         vc = None
 
         try:
-            vc = await ctx.guild.create_voice_channel(name=name, category=ctx.channel.category)
+            vc = await self.guild.create_voice_channel(name=name, category=ctx.channel.category)
         except discord.Forbidden:
-            embed = discord.Embed(title="Error", description="Bot does not have permissions")
+            embed = discord.Embed(
+                title="Error", description="Bot does not have permissions.", colour=Colour.red())
             await ctx.respond(embed=embed)
             return
 
         self.cache["countdowns"][str(vc.id)] = {"name": name, "date": after.dt}
         await self.update_db()
-        
+
         self.bot.loop.create_task(self.start_countdown(str(vc.id)))
-        
-        embed = discord.Embed(title="Success", description="Countdown created.")
+
+        embed = discord.Embed(
+            title="Success", description="Countdown created.", colour=Colour.green())
         await ctx.respond(embed=embed)
 
-    @commands.slash_command(name="cd", description="Gets duration until Kusanali Drop") 
+    @commands.slash_command(name="cd", description="Gets duration until Kusanali Drop")
     @checks.has_permissions(PermissionLevel.REGULAR)
     async def cd(self, ctx: ApplicationContext):
-        diff = round((datetime.fromtimestamp(Countdown.kusanaliDrop) - datetime.now()).total_seconds())
+        diff = round((datetime.fromtimestamp(
+            Countdown.kusanali_drop) - datetime.now()).total_seconds())
 
         m, r = divmod(diff, 60)
         h, m = divmod(m, 60)
@@ -164,6 +160,7 @@ class Countdown(BaseCog):
         cd_image.save("./assets/countdown.png")
 
         await ctx.respond(file=discord.File('./assets/countdown.png'))
+
 
 def setup(bot):
     bot.add_cog(Countdown(bot))

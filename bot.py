@@ -21,26 +21,33 @@ logger = get_logger(__name__)
 class KusanaliBot(commands.Bot):
     def __init__(self):
         super().__init__(intents=discord.Intents.all())
+
+        # loading private config variables
         self.config = Config(self)
         self.config.load_cache_env()
 
         self.session = None
-        self.api = Database(self)
-        self.db = self.api.db
         self.connected = asyncio.Event()
 
+        # fetching the online database
+        self.api = Database(self)
+        self.db = self.api.db
+
+        # loading public config variables
         self.loop.create_task(self.config.load_cache_db(self.db))
 
         self.start_time = datetime.utcnow()
 
-        self.tasks_done = 0
-
         self.on_start()
 
-        thread = Thread(target=self.wait_for_tasks)
-        thread.start()
+        # counter for done loading cogs tasks, used to determine when to run after_load()
+        self.tasks_done = 0
+
+        # wait for tasks to be done
+        self.loop.create_task(self.wait_for_tasks())
 
     def on_start(self):
+        # loads the cogs into the bot
         for cog in [file.replace('.py', '') for file in listdir("cogs") if isfile(join('cogs', file))]:
             logger.info(f"Loading cog: {cog}")
 
@@ -51,13 +58,15 @@ class KusanaliBot(commands.Bot):
                 logger.error(f"Failed to load {cog}")
                 logger.error(f"Error: {e}")
 
-    def wait_for_tasks(self):
+    async def wait_for_tasks(self):
+        # waits until all the loding cogs tasks are done
         while self.tasks_done < len(self.cogs):
-            pass
+            await asyncio.sleep(1)
 
-        self.loop.create_task(self.after_start())
+        await self.after_start()
 
     async def after_start(self):
+        # executes the after_load() method inside cogs
         for cog in self.cogs:
             logger.info(f"Executing after load for: {cog}")
 
@@ -83,19 +92,25 @@ class KusanaliBot(commands.Bot):
                     await self.start(self.config["bot_token"])
                 except discord.PrivilegedIntentsRequired:
                     retry_intents = True
+
                 if retry_intents:
                     await self.http.close()
+                    
                     if self.ws is not None and self.ws.open:
                         await self.ws.close(code=1000)
+
                     self._ready.clear()
                     intents = discord.Intents.default()
                     intents.members = True
-                    # Try again with members intent
+
+                    # try again with members intent
                     self._connection._intents = intents
                     logger.warning(
                         "Attempting to login with only the server members privileged intent. Some plugins might not work correctly."
                     )
+
                     await self.start(self.token)
+
             except discord.PrivilegedIntentsRequired:
                 logger.critical(
                     "Privileged intents are not explicitly granted in the discord developers dashboard."
@@ -107,11 +122,12 @@ class KusanaliBot(commands.Bot):
             finally:
                 if not self.is_closed():
                     await self.close()
+
                 if self.session:
                     await self.session.close()
 
         # noinspection PyUnusedLocal
-        def stop_loop_on_completion(f):
+        def stop_loop_on_completion():
             loop.stop()
 
         def _cancel_tasks():
@@ -133,6 +149,7 @@ class KusanaliBot(commands.Bot):
             for task in tasks:
                 if task.cancelled():
                     continue
+
                 if task.exception() is not None:
                     loop.call_exception_handler(
                         {
@@ -144,6 +161,7 @@ class KusanaliBot(commands.Bot):
 
         future = asyncio.ensure_future(runner(), loop=loop)
         future.add_done_callback(stop_loop_on_completion)
+
         try:
             loop.run_forever()
         except KeyboardInterrupt:
