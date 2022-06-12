@@ -39,6 +39,9 @@ class KusanaliBot(commands.Bot):
         # loading guild
         self.loop.create_task(self.load_guild())
 
+        while self.guild == None:
+            self.loop.create_task(asyncio.sleep(1))
+
         self.start_time = datetime.utcnow()
 
         self.on_start()
