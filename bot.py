@@ -36,6 +36,9 @@ class KusanaliBot(commands.Bot):
         # loading public config variables
         self.loop.create_task(self.config.load_cache_db(self.db))
 
+        # loading guild
+        self.loop.create_task(self.load_guild())
+
         self.start_time = datetime.utcnow()
 
         self.on_start()
@@ -57,6 +60,9 @@ class KusanaliBot(commands.Bot):
             except Exception as e:
                 logger.error(f"Failed to load {cog}")
                 logger.error(f"Error: {e}")
+
+    async def load_guild(self):
+        self.guild: discord.Guild = await self.fetch_guild(self.bot.config["guild_id"])
 
     async def wait_for_tasks(self):
         # waits until all the loding cogs tasks are done
