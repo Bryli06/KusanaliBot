@@ -1,4 +1,5 @@
 import math
+import os
 import discord
 from discord.ext import commands
 
@@ -120,11 +121,14 @@ class Leveling(BaseCog):
 
                 break
 
-        await drawer.create_rank_card(user.display_avatar.url, exp, f"{user.display_name}#{user.discriminator}", rank)
+        path = await drawer.create_rank_card(user.display_avatar.url, exp, f"{user.display_name}#{user.discriminator}", rank)
 
-        file = discord.File("./assets/rank.png")
+        file = discord.File(path)
 
+        await ctx.defer()
         await ctx.respond(file=file)
+
+        os.remove(path)
 
     @commands.user_command(name="Get user rank")
     @checks.has_permissions(PermissionLevel.REGULAR)

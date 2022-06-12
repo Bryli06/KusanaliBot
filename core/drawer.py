@@ -4,6 +4,8 @@ import requests
 
 import base64
 
+import random
+
 from core import calculate_level
 
 
@@ -44,12 +46,14 @@ async def create_rank_card(url, exp, name, rank, upload = False):
 
     base = base.resize((600, 200))
 
-    base.save("./assets/rank.png")
+    id = random.randint(0, 1000000)
+
+    base.save(f"./assets/rank{id}.png")
 
     if upload:
-        return await upload_image("./assets/rank.png")
+        return await upload_image(f"./assets/rank{id}.png")
 
-    return "done"
+    return f"./assets/rank{id}.png"
 
 
 async def upload_image(path):
