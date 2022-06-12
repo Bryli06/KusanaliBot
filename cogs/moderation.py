@@ -878,7 +878,7 @@ class Moderation(BaseCog):
             embed = discord.Embed(
                 title="Error", description=f"Duration {duration}s too large. Maximum slowmode is 6h (21600s).", colour=Colour.red())
             await ctx.respond(embed=embed)
-            
+
             return
 
         if not channel:
@@ -897,14 +897,16 @@ class Moderation(BaseCog):
             file = discord.File(
                 f"./assets/feet/{random.choice(os.listdir('./assets/feet/'))}")
 
-            await ctx.response.send_message(f"{ctx.author.mention} likes feet", file=file)
+            ctx.defer()
+            await ctx.respond(f"{ctx.author.mention} likes feet", file=file)
 
             return
 
         file = discord.File(
             f"./assets/bonk/{random.choice(os.listdir('./assets/bonk/'))}")
 
-        await ctx.response.send_message(member.mention, file=file)
+        await ctx.defer()
+        await ctx.respond(member.mention, file=file)
 
     @commands.slash_command(name="feet", description="feet", default_member_permissions=Permissions(manage_messages=True))
     @checks.has_permissions(PermissionLevel.TRIAL_MOD)
@@ -912,7 +914,8 @@ class Moderation(BaseCog):
         file = discord.File(
             f"./assets/feet/{random.choice(os.listdir('./assets/feet/'))}")
 
-        await ctx.response.send_message(file=file)
+        await ctx.defer()
+        await ctx.respond(file=file)
 
 
 def setup(bot):
