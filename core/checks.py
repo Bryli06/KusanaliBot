@@ -13,12 +13,33 @@ class PermissionLevel(Enum):
     def __str__(self):
         return self.name
 
+    # enjoy some wet comments
+
+    # regular users
     REGULAR = 0
-    TC_MOD = 1
-    TRIAL_MOD = 2
-    MOD = 3
-    ADMINISTRATOR = 4
-    OWNER = 5
+
+    # all staff
+    STAFF = 1
+    
+    # section mods
+    TC_MOD = 2
+    EVENT_MOD = 3
+    
+    # trial mods
+    TRIAL_MOD = 4
+
+    # regular mods
+    MOD = 5
+
+    # section admins
+    EVENT_ADMIN = 6
+    TC_ADMIN = 7
+
+    # admins
+    ADMINISTRATOR = 8
+
+    # owner
+    OWNER = 9
     
 
 def only_modmail_thread(modmail_channel_id) -> Callable[[T], T]:
@@ -59,27 +80,47 @@ async def check_permissions(ctx: commands.Context, permission_level) -> bool:
 
     """
 
-    # Check for server/bot ownership
+    # check for server/bot ownership
     if await ctx.bot.is_owner(ctx.author) or ctx.author.id == ctx.bot.user.id or ctx.author.id == ctx.guild.owner_id or str(ctx.author.id) in ctx.bot.config["owners"]:
         return True
 
-    # Check for administrator
-    if permission_level is not PermissionLevel.OWNER and ctx.channel.permissions_for(ctx.author).administrator:
-        return True
+    # check for admin
+    if permission_level is not PermissionLevel.OWNER:
+        if ctx.channel.permissions_for(ctx.author).administrator:
+            return True
 
-    # Check for mod
-    if permission_level is not PermissionLevel.ADMINISTRATOR and ctx.author.get_role(ctx.bot.config["mod"]) != None:
-        return True
+    # check for section admin
+    if permission_level is not PermissionLevel.ADMINISTRATOR:
+        if  ctx.author.get_role(ctx.bot.config["tcAdmin"]) != None:
+            return True
 
-    # Check for trial mod
-    if permission_level is not PermissionLevel.MOD and ctx.author.get_role(ctx.bot.config["trialMod"]) != None:
-        return True
+        if  ctx.author.get_role(ctx.bot.config["eventAdmin"]) != None:
+            return True
 
-    # Check for theorycraft mod
-    if permission_level is not PermissionLevel.TRIAL_MOD and ctx.author.get_role(ctx.bot.config["tcMod"]) != None:
-        return True
+    # check for mod
+    if permission_level is not PermissionLevel.TC_ADMIN and permission_level is not PermissionLevel.EVENT_ADMIN:
+        if ctx.author.get_role(ctx.bot.config["mod"]) != None:
+            return True
 
-    # Check if it's a regular user
+    # check for trial mod
+    if permission_level is not PermissionLevel.MOD:
+        if ctx.author.get_role(ctx.bot.config["trialMod"]) != None:
+            return True
+
+    # check for section mod
+    if permission_level is not PermissionLevel.TRIAL_MOD:
+        if  ctx.author.get_role(ctx.bot.config["tcMod"]) != None:
+            return True
+
+        if  ctx.author.get_role(ctx.bot.config["eventMod"]) != None:
+            return True
+
+    # check for staff
+    if permission_level is not PermissionLevel.TC_MOD and permission_level is not PermissionLevel.EVENT_MOD:
+        if ctx.channel.permissions_for(ctx.author).manage_messages:
+            return True
+
+    # check for regular user
     if permission_level is PermissionLevel.REGULAR:
         return True
 
