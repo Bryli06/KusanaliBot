@@ -33,6 +33,11 @@ class Modmail(BaseCog):
             embed = discord.Embed(
                 description="If you wish to start a modmail thread please use `/start`\nFor ending an active thread please use `/end`", colour=Colour.blue())
 
+            dm_channel = await message.author.create_dm()
+            await dm_channel.send(embed=embed)
+
+            return
+
         thread = await self.guild.fetch_channel(
             self.cache["userThreads"][str(message.author.id)])
 
@@ -153,9 +158,13 @@ class Modmail(BaseCog):
 
         await thread.send(embed=embed)
 
+        await ctx.defer()
+
         role = await self.guild._fetch_role(self._modmail_role_id)
-        for member in role.members:
-            await thread.add_user(member)
+
+        async for member in self.guild.fetch_members(limit=None):
+            if role in member.roles:
+                await thread.add_user(member)
 
         self.cache["userThreads"].update({str(ctx.author.id): thread.id})
         await self.update_db()
