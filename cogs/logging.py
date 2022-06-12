@@ -686,13 +686,13 @@ class Logging(BaseCog):
         embed.add_field(
             name="Traceback", value=f"`{''.join(tb.format_exception(type(exception), exception, exception.__traceback__))}`", inline=False)
 
-        await self.fix_embed(embed)
-
         if hint != "":
             embed.add_field(name="Hint", value=hint, inline=False)
 
         if suggestion != "":
             embed.add_field(name="Suggestion", value=suggestion, inline=False)
+
+        await self.fix_embed(embed)
 
         if self.cache["errChannel"] == None:
             if self.cache["logChannel"] == None:
