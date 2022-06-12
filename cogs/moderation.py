@@ -905,7 +905,7 @@ class Moderation(BaseCog):
                 file = discord.File(
                     f"./assets/bonk/{random.choice(os.listdir('./assets/bonk/'))}")
 
-                await ctx.respond(file=file)
+                await ctx.respond(member.mention, file=file)
 
             return
 
