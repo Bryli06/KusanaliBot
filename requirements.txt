@@ -1,4 +1,4 @@
-aiohttp==3.7.4.post0
+aiohttp==3.7.4
 async-timeout==3.0.1
 attrs==21.4.0
 autopep8==1.6.0
@@ -30,3 +30,4 @@ virtualenv==20.14.1
 virtualenv-clone==0.5.7
 yarg==0.1.9
 yarl==1.7.2
+dateparser==1.1.1

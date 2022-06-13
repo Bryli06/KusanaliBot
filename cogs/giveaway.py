@@ -7,6 +7,7 @@ from discord.ui import Select, Button, View
 from discord import ApplicationContext, Colour, Interaction, Permissions, SlashCommandGroup, TextChannel
 
 from core import checks
+from core.time import TimeConverter, InvalidTime
 from core.base_cog import BaseCog
 from core.checks import PermissionLevel
 
@@ -128,7 +129,6 @@ class Giveaway(BaseCog):
 
         reward = cache["reward"]
         winners = cache["winners"]
-        allowed_roles = cache["allowedRoles"]
         participants = cache["participants"]
 
         # end giveaway with no winners
@@ -199,15 +199,21 @@ class Giveaway(BaseCog):
     @checks.has_permissions(PermissionLevel.EVENT_ADMIN)
     async def _ga_create(self, ctx: ApplicationContext, reward: discord.Option(str, "The name of the reward."),
                          winners: discord.Option(int, "The number of winners.", min_value=1),
-                         minutes: discord.Option(int, "Minutes.", min_value=0, default=0),
-                         hours: discord.Option(int, "Hours.", min_value=0, default=0),
-                         days: discord.Option(int, "Days.", min_value=0, default=0)):
+                         end: discord.Option(str, "How long is the giveaway.")):
         """
         Creates a new giveaway.
 
         """
+        duration = 0
+        try:
+            duration = TimeConverter(end)
 
-        duration = 60 * (minutes + 60 * (hours + 24 * days))
+        except InvalidTime as e:
+            embed = discord.Embed(
+                    title="error", description=e,colour=Colour.red())
+            await ctx.respond(embed=embed)
+
+            return
 
         # stop if amount is 0
         if duration == 0:
@@ -218,6 +224,8 @@ class Giveaway(BaseCog):
             return
 
         # limits the roles shown to 25
+        allowed_roles=None
+
         allowed_roles = Select(
             placeholder="Select allowed roles",
             max_values=len(self.bot.config["levelRoles"]) if len(
@@ -227,7 +235,7 @@ class Giveaway(BaseCog):
         )
 
         async def _roles_callback(interaction: Interaction):
-            unix = int(time.mktime(datetime.now().timetuple())) + duration
+            unix = int(duration.final.timestamp())
 
             giveaway = {
                 "channel": ctx.channel_id,

@@ -1,14 +1,14 @@
 import asyncio
-from bson import utc
 
 import discord
 from discord.ext import commands
 from discord import ApplicationContext, Colour, Permissions, SlashCommandGroup
 
-from datetime import datetime
+from datetime import datetime, timezone
 from dateutil import relativedelta
 
 from core import checks
+from core.time import InvalidTime, TimeConverter
 from core.checks import PermissionLevel
 from core.base_cog import BaseCog
 
@@ -43,15 +43,17 @@ class Countdown(BaseCog):
             return
 
         while True:
-            if not await self.update(self.cache["countdowns"][str(channel_id)]["name"], self.cache["countdowns"][str(channel_id)]["date"], channel):
+            if not await self.update(self.cache["countdowns"][str(channel_id)]["name"], self.cache["countdowns"][str(channel_id)]["date"].replace(tzinfo=timezone.utc), channel):
                 return
 
     async def update(self, name, date, channel):
-        diff = relativedelta.relativedelta(date, datetime.now(utc))
-
-        if date < datetime.now(utc):
+        diff = relativedelta.relativedelta(date,
+                                            datetime.now(timezone.utc))
+        if date < datetime.now(timezone.utc):
             await channel.edit(name=name)
             self.cache["countdowns"].pop(str(channel.id))
+
+            await self.update_db()
 
             return False
 
@@ -109,19 +111,17 @@ class Countdown(BaseCog):
     @_cd.command(name="create", description="Create a countdown using a date.")
     @checks.has_permissions(PermissionLevel.OWNER)
     async def create(self, ctx: ApplicationContext, name: discord.Option(str, description="Message you would like to count down"),
-                     day: discord.Option(int, "Day.", min_value=0, default=0),
-                     month: discord.Option(int, "Month.", min_value=0, default=0),
-                     year: discord.Option(int, "Year.", min_value=0, default=0)):
+                     end: discord.Option(str, "When the countdown ends")):
         """
         Creates a new countdown in the form of a voice channel.
 
         """
-
-        date = datetime(year, month, day, tzinfo=utc)
-
-        if date <= datetime.now(utc):
+        date = None
+        try:
+            date = TimeConverter(end).final
+        except InvalidTime as e:
             embed = discord.Embed(
-                title="Error", description="Invalid time provided.", colour=Colour.red())
+                    title="Error", description=e, colour=Colour.red())
             await ctx.respond(embed=embed)
 
             return
@@ -154,8 +154,8 @@ class Countdown(BaseCog):
 
         """
 
-        diff = round((datetime.fromtimestamp(
-            Countdown.kusanali_drop) - datetime.now()).total_seconds())
+        diff = round(Countdown.kusanali_drop 
+                        - datetime.now().timestamp())
 
         m, r = divmod(diff, 60)
         h, m = divmod(m, 60)

@@ -4,14 +4,14 @@ from discord.ext import commands
 from discord import ApplicationContext, Colour, Interaction, Permissions
 from discord.ui import View, Select
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from core.context import ModContext
 import copy
 import re
 from core.base_cog import BaseCog
 
-from core.time import UserFriendlyTime
+from core.time import TimeConverter, InvalidTime
 from core import checks
 from core.checks import PermissionLevel
 
@@ -79,16 +79,24 @@ class Moderation(BaseCog):
     @commands.slash_command(name="ban", description="Bans a member", default_member_permissions=Permissions(ban_members=True))
     @checks.has_permissions(PermissionLevel.MOD)
     async def ban(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to ban."),
-                  minutes: discord.Option(int, "Minutes.", min_value=0, default=0),
-                  hours: discord.Option(int, "Hours.", min_value=0, default=0),
-                  days: discord.Option(int, "Days.", min_value=0, default=0),
+                  duration: discord.Option(str, description="The duration of the ban.", default="inf"),
                   reason: discord.Option(str, description="Reason for ban.", default="No reason given.")):
         """
         Bans a member via /ban [members] [duration: Optional] [reason: Optional]
 
         """
+        
+        after = None
+        if duration != "inf":
+            try:
+                after = TimeConverter(duration)
 
-        duration = 60 * (minutes + 60 * (hours + 24 * days))
+            except InvalidTime as e:
+                embed = discord.Embed(
+                        title="Error", description=e, colour=Colour.red())
+                await ctx.respond(embed=embed)
+
+                return
 
         member_ids = await self.get_member_ids(members)
 
@@ -108,22 +116,23 @@ class Moderation(BaseCog):
                 continue
 
             try:
+                await member.send(f"You have been banned from {self.guild.name}. Reason: {reason}")
+                description += "and a message has been sent.\n"
+            except:
+                self.logger.error(f"Could not message {member.name}.")
+                description += "but a message could not be sent.\n"
+            
+            try:
                 await self.guild.ban(member, reason=reason)
                 description += f"The member {member.mention} `{member.name}#{member.discriminator}` has been successfully banned, "
             except Exception as e:
                 description += f"The member {member.mention} `{member.name}#{member.discriminator}` could not be banned.\n"
                 continue
 
-            try:
-                await member.send(f"You have been banned from {self.guild.name}. Reason: {reason}")
-                description += "and a message has been sent.\n"
-            except:
-                self.logger.error(f"Could not message {member.name}.")
-                description += "but a message could not be sent.\n"
 
-            if duration > 0:
-                self.cache["unbanQueue"][str(member_id)] = duration
-                await self._unban(member, duration)
+            if after:
+                self.cache["unbanQueue"][str(member_id)] = after.final.timestamp()
+                await self._unban(member_id, after.final.timestamp())
 
             self.cache["bans"].setdefault(str(member_id), []).append(
                 {"responsible": ctx.author.id, "reason": reason, "duration": duration, "time": datetime.now().timestamp()})
@@ -133,8 +142,8 @@ class Moderation(BaseCog):
 
         await self.update_db()
 
-        if duration > 0:
-            description += f"\nUnbanning at <t:{duration}:F>.\n"
+        if after:
+            description += f"\nUnbanning at <t:{round(after.final.timestamp())}:F>.\n"
 
         embed = discord.Embed(
             title="Report", description=description, colour=Colour.blue())
@@ -195,9 +204,9 @@ class Moderation(BaseCog):
         Handles unban logic depending on time left.
 
         """
-
-        now = datetime.utcnow()
-        closetime = (time - now).total_seconds() if time else 0
+        end = datetime.fromtimestamp(int(time))
+        now = datetime.now()
+        closetime = (end - now).total_seconds() if time else 0
 
         if closetime > 0:
             self.bot.loop.call_later(closetime, self._unban_after, member)
@@ -214,7 +223,7 @@ class Moderation(BaseCog):
             await self.guild.unban(member)
 
             self.cache["unbans"].setdefault(str(member_id), []).append(
-                {"responsible": self.bot.user, "reason": "Automated unban", "time": datetime.now().timestamp()})
+                {"responsible": self.bot.user.id, "reason": "Automated unban", "time": datetime.now().timestamp()})
         except Exception as e:
             self.logger.error(f"{e}")
 
@@ -372,9 +381,7 @@ class Moderation(BaseCog):
     @commands.slash_command(name="mute", description="Mutes a member", default_member_permissions=Permissions(manage_messages=True))
     @checks.has_permissions(PermissionLevel.TRIAL_MOD)
     async def mute(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to mute."),
-                   minutes: discord.Option(int, "Minutes.", min_value=0, default=0),
-                   hours: discord.Option(int, "Hours.", min_value=0, default=0),
-                   days: discord.Option(int, "Days.", min_value=0, default=0),
+                   duration: discord.Option(str, description="The duration of the mute.", default="inf"),
                    reason: discord.Option(str, description="Reason for mute.", default="No reason given.")):
         """
         Mutes a member via /mute [members] [duration: Optional] [reason: Optional]
@@ -388,7 +395,17 @@ class Moderation(BaseCog):
 
             return
 
-        duration = 60 * (minutes + 60 * (hours + 24 * days))
+        after = None
+        if duration != "inf":
+            try:
+                after = TimeConverter(duration)
+
+            except InvalidTime as e:
+                embed = discord.Embed(
+                        title="Error", description=e, colour=Colour.red())
+                await ctx.respond(embed=embed)
+
+                return
 
         member_ids = await self.get_member_ids(members)
 
@@ -430,9 +447,9 @@ class Moderation(BaseCog):
                 self.logger.error(f"Could not message {member.name}.")
                 description += "but a message could not be sent.\n"
 
-            if duration > 0:
-                self.cache["unmuteQueue"][str(member_id)] = duration
-                await self._unmute(member, duration)
+            if after:
+                self.cache["unmuteQueue"][str(member_id)] = after.final.timestamp()
+                await self._unmute(member_id, after.final.timestamp())
 
             self.cache["mutes"].setdefault(str(member_id), []).append(
                 {"responsible": ctx.author.id, "reason": reason, "duration": duration, "time": datetime.now().timestamp(), "roles": roles})
@@ -442,8 +459,8 @@ class Moderation(BaseCog):
 
         await self.update_db()
 
-        if duration > 0:
-            description += f"Unmuting at <t:{duration}:F>.\n"
+        if after:
+            description += f"Unmuting at <t:{round(after.final.timestamp())}:F>.\n"
 
         embed = discord.Embed(
             title="Report", description=description, colour=Colour.blue())
@@ -512,9 +529,9 @@ class Moderation(BaseCog):
         Handles unmute logic depending on time left.
 
         """
-
-        now = datetime.utcnow()
-        closetime = (time - now).total_seconds() if time else 0
+        end = datetime.fromtimestamp(int(time))
+        now = datetime.now()
+        closetime = (end - now).total_seconds() if time else 0
 
         if closetime > 0:
             self.bot.loop.call_later(closetime, self._unmute_after, member)
@@ -533,7 +550,7 @@ class Moderation(BaseCog):
             await member.edit(roles=roles)
 
             self.cache["unmutes"].setdefault(str(member_id), []).append(
-                {"responsible": self.bot.user, "reason": f"Automated unmute", "time": datetime.now().timestamp()})
+                {"responsible": self.bot.user.id, "reason": f"Automated unmute", "time": datetime.now().timestamp()})
         except Exception as e:
             self.logger.error(f"{e}")
 
@@ -862,17 +879,36 @@ class Moderation(BaseCog):
 #--------------------------------------------------------------------------------#
 
     @commands.slash_command(name="slowmode", description="Sets slowmode for a channel.", default_member_permissions=Permissions(manage_channels=True))
-    @checks.has_permissions(PermissionLevel.ADMINISTRATOR)
-    async def slowmode(self, ctx: ApplicationContext, channel: discord.Option(discord.TextChannel, description="The channel you want to set slowmode.", default=None),
-                       seconds: discord.Option(int, "Seconds.", min_value=0, default=0),
-                       minutes: discord.Option(int, "Minutes.", min_value=0, default=0),
-                       hours: discord.Option(int, "Hours.", min_value=0, default=0)):
+    @checks.has_permissions(PermissionLevel.MOD)
+    async def slowmode(self, ctx: ApplicationContext, 
+                  duration: discord.Option(str, description="The duration of the slowmode."), channel: discord.Option(discord.TextChannel, description="The channel you want to set slowmode.", default=None)):
         """
         Sets slowmode for a channel.
 
         """
+        regex = (r'((?P<hours>-?\d+)h)?'
+                 r'((?P<minutes>-?\d+)m)?'
+                 r'((?P<seconds>-?\d+)s)?')
+        match = re.compile(regex, re.IGNORECASE).match(str(duration))
+        duration = None
 
-        duration = seconds + 60 * (minutes + 60 * hours)
+        if match:
+            for k, v in match.groupdict().items():
+                if v:
+                    if not duration:
+                        duration = 0
+                    if k == 'hours':
+                        duration += int(v)*3600
+                    elif k == "minutes":
+                        duration += int(v)*60
+                    elif k == "duration":
+                        duration += int(v)
+
+        if duration is None:
+            embed = discord.Embed(
+                title="Error", description=f"Could not parse time: {time}. Make sure it is in the form []h[]m[]s.")
+            await ctx.respond(embed=embed)
+            return
 
         if duration > 21600:
             embed = discord.Embed(
@@ -890,7 +926,25 @@ class Moderation(BaseCog):
             title="Success", description=f"Successfully set slowmode in {channel.mention} to {duration}s.", colour=Colour.green())
         await ctx.respond(embed=embed)
 
-    @commands.slash_command(name="bonk", description="Bonk your enemies.", default_member_permissions=Permissions(manage_messages=True))
+
+    @commands.slash_command(name="purge", description="Purge messages.", default_member_permissions=Permissions(manage_messages=True))
+    @checks.has_permissions(PermissionLevel.TRIAL_MOD)
+    async def purge(self, ctx: ApplicationContext, messages: discord.Option(int, description="Number of messages to search through.", min_value=1), 
+                user: discord.Option(discord.Member, description="User's messages to purge.", default=None)):
+        """
+        Purges messages via /purge [number] [user: optional]
+
+        """
+
+        deleted = await ctx.channel.purge(limit=messages,
+                check=lambda m, user=user: (m.author.id == user.id and not m.pinned) if user else (not m.pinned)) #bruh what is this lambda function
+
+        embed = discord.Embed(title="Success", description=f"Successfully purged {len(deleted)} messages.", colour=Colour.green())
+        await ctx.respond(embed=embed)
+
+
+    @commands.slash_command(name="bonk", description="Bonk your enemies.", 
+                            default_member_permissions=Permissions(manage_messages=True))
     @checks.has_permissions(PermissionLevel.STAFF)
     async def bonk(self, ctx: ApplicationContext, member: discord.Option(discord.Member, "Member to bonk.")):
         """

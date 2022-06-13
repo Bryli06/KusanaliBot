@@ -63,9 +63,8 @@ class Logging(BaseCog):
                         value=f"{ctx.member.name}#{ctx.member.discriminator}")
         embed.add_field(name="Banned by", value=f"{ctx.moderator.mention}")
 
-        if ctx.duration:
-            embed.add_field(name="Duration",
-                            value="Permanent" if ctx.duration == 0 else f"Until <t:{int(ctx.duration)}:F>")
+        embed.add_field(name="Duration",
+                            value="Permanent" if ctx.duration == "inf" else f"{ctx.duration}")
 
         if ctx.reason:
             embed.add_field(name="Reason", value=ctx.reason)
@@ -197,9 +196,8 @@ class Logging(BaseCog):
                         value=f"{ctx.member.name}#{ctx.member.discriminator}")
         embed.add_field(name="Muted by", value=f"{ctx.moderator.mention}")
 
-        if ctx.duration:
-            embed.add_field(name="Duration",
-                            value="Permanent" if ctx.duration == 0 else f"Until <t:{int(ctx.duration)}:F>")
+        embed.add_field(name="Duration",
+                            value="Permanent" if ctx.duration == "inf" else f"{ctx.duration}")
 
         if ctx.reason:
             embed.add_field(name="Reason", value=ctx.reason)
@@ -684,7 +682,7 @@ class Logging(BaseCog):
 
         embed.add_field(name="Exception", value=f"`{exception}`", inline=False)
         embed.add_field(
-            name="Traceback", value=f"`{''.join(tb.format_exception(type(exception), exception, exception.__traceback__))}`", inline=False)
+                name="Traceback", value=f"`{''.join(tb.format_exception(type(exception), exception, exception.__traceback__))[-1024:]}`", inline=False)
 
         if hint != "":
             embed.add_field(name="Hint", value=hint, inline=False)

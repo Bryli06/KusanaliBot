@@ -29,7 +29,6 @@ six = "==1.16.0"
 toml = "==0.10.2"
 typing-extensions = "==4.2.0"
 urllib3 = "==1.26.9"
-uvloop = "==0.16.0"
 virtualenv = "==20.14.1"
 virtualenv-clone = "==0.5.7"
 yarg = "==0.1.9"
@@ -37,8 +36,9 @@ yarl = "==1.7.2"
 python-dateutil = "*"
 parsedatetime = "*"
 pillow = "*"
+dateparser = "*"
 
 [dev-packages]
 
 [requires]
-python_version = "3.8"
+python_version = "3.9"

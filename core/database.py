@@ -20,8 +20,6 @@ class Database:
             logger.error(f"MongoDB connection error: {e}")
             sys.exit(0)
 
-        self.session = bot.get_session()
-
     async def get_collection(self, coll):
         return self.db[coll]
 
