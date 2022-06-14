@@ -579,9 +579,9 @@ class Logging(BaseCog):
                               timestamp=member.joined_at, colour=Colour.green())
 
         try:
-            embed.description = f"{member.mention} is the {ordinal(len(await self.guild.fetch_members(limit=None).get_members()))} member."
-        except Exception:
-            pass
+            embed.description = f"{member.mention} is the {ordinal(len([member async for member in self.guild.fetch_members(limit=None)]))} member."
+        except Exception as e:
+            self.bot.dispatch("error", e)
 
         embed.set_author(
             name=f"{member.name}#{member.discriminator}", icon_url=member.avatar)
