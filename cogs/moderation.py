@@ -151,6 +151,7 @@ class Moderation(BaseCog):
         await ctx.respond(embed=embed)
 
     @commands.slash_command(name="unban", description="Unbans a member", default_member_permissions=Permissions(ban_members=True))
+    @commands.max_concurrency(1, wait=True)
     @checks.has_permissions(PermissionLevel.MOD)
     async def unban(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to unban."),
                     reason: discord.Option(str, description="Reason for unban.", default="No reason given.")):
@@ -274,6 +275,7 @@ class Moderation(BaseCog):
 
 
     @commands.slash_command(name="kick", description="Kicks a member", default_member_permissions=Permissions(kick_members=True))
+    @commands.max_concurrency(1, wait=True)
     @checks.has_permissions(PermissionLevel.TRIAL_MOD)
     async def kick(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to kick."),
                    reason: discord.Option(str, description="Reason for kick.", default="No reason given.")):
@@ -471,6 +473,7 @@ class Moderation(BaseCog):
         await ctx.respond(embed=embed)
 
     @commands.slash_command(name="unmute", description="Unmutes a member.", default_member_permissions=Permissions(manage_messages=True))
+    @commands.max_concurrency(1, wait=True)
     @checks.has_permissions(PermissionLevel.TRIAL_MOD)
     async def unmute(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to unmute."),
                      reason: discord.Option(str, description="Reason for unmute.", default="No reason given.")):
@@ -649,6 +652,7 @@ class Moderation(BaseCog):
         await ctx.respond(embed=embed)
 
     @commands.slash_command(name="pardon", description="Pardons a warn", default_member_permissions=Permissions(manage_messages=True))
+    @commands.max_concurrency(1, wait=True)
     @checks.has_permissions(PermissionLevel.TRIAL_MOD)
     async def pardon(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to pardon warns for."),
                      reason: discord.Option(str, description="Warn reason.", default="No reason given.")):
@@ -795,6 +799,7 @@ class Moderation(BaseCog):
         await ctx.respond(embed=embed)
 
     @commands.slash_command(name="omit", description="Deletes a note", default_member_permissions=Permissions(manage_messages=True))
+    @commands.max_concurrency(1, wait=True)
     @checks.has_permissions(PermissionLevel.TRIAL_MOD)
     async def remove_note(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to omit notes for.")):
         """
@@ -914,7 +919,7 @@ class Moderation(BaseCog):
             embed = discord.Embed(
                 title="Error", description=f"Could not parse duration: {duration}. Make sure it is in the form []h[]m[]s.", colour=Colour.red())
             await ctx.respond(embed=embed)
-            
+
             return
 
         if duration > 21600:
@@ -949,8 +954,7 @@ class Moderation(BaseCog):
             title="Success", description=f"Successfully purged {len(deleted)} messages.", colour=Colour.green())
         await ctx.respond(embed=embed)
 
-    @commands.slash_command(name="bonk", description="Bonk your enemies.",
-                            default_member_permissions=Permissions(manage_messages=True))
+    @commands.slash_command(name="bonk", description="Bonk your enemies.", default_member_permissions=Permissions(manage_messages=True))
     @checks.has_permissions(PermissionLevel.STAFF)
     async def bonk(self, ctx: ApplicationContext, member: discord.Option(discord.Member, "Member to bonk.")):
         """
