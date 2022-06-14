@@ -505,7 +505,9 @@ class Logging(BaseCog):
                 return
 
             chn = await self.guild.fetch_channel(self.cache["logChannel"])
-            await chn.send(embed=embed)
+
+            if len(embed.fields) > 0 or len(embed.fields) == 1 and before.position == after.position:
+                await chn.send(embed=embed)
 
             return
 
@@ -513,6 +515,54 @@ class Logging(BaseCog):
 
         if len(embed.fields) > 0 or len(embed.fields) == 1 and before.position == after.position:
             await chn.send(embed=embed)
+
+    async def member_boosted(self, member: discord.Member):
+        """
+        Logs booster add events.
+        
+        """
+
+        embed = discord.Embed(title=f"Member \"{member.name}\" has boosted the server!",
+                              timestamp=datetime.now(), colour=Colour.nitro_pink())
+
+        if member.premium_since:
+            embed.add_field(name="Booster since", value=member.premium_since, inline=False)
+
+        if self.cache["srvChannel"] == None:
+            if self.cache["logChannel"] == None:
+                return
+
+            chn = await self.guild.fetch_channel(self.cache["logChannel"])
+            await chn.send(embed=embed)
+
+            return
+
+        chn = await self.guild.fetch_channel(self.cache["srvChannel"])
+        await chn.send(embed=embed)
+
+    async def member_unboosted(self, member: discord.Member):
+        """
+        Logs booster remove events.
+        
+        """
+
+        embed = discord.Embed(title=f"Member \"{member.name}\" has unboosted the server",
+                              timestamp=datetime.now(), colour=Colour.red())
+
+        if member.premium_since:
+            embed.add_field(name="Booster since", value=member.premium_since, inline=False)
+
+        if self.cache["srvChannel"] == None:
+            if self.cache["logChannel"] == None:
+                return
+
+            chn = await self.guild.fetch_channel(self.cache["logChannel"])
+            await chn.send(embed=embed)
+
+            return
+
+        chn = await self.guild.fetch_channel(self.cache["srvChannel"])
+        await chn.send(embed=embed)
 
 #---------------------------------------join/leave logs--------------------------------------#
 
@@ -579,6 +629,14 @@ class Logging(BaseCog):
     async def on_member_update(self, before: discord.Member, after: discord.Member):
         if before.bot:
             return
+
+        premium_role = self.guild.premium_subscriber_role
+
+        if premium_role:
+            if premium_role in after.roles and premium_role not in before.roles:
+                self.member_boosted(after)
+            elif premium_role in before.roles and premium_role not in after.roles:
+                self.member_unboosted(after)
 
         embed = discord.Embed(
             title=f"Member updated",
