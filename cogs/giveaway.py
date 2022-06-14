@@ -2,9 +2,9 @@ import random
 
 import discord
 from discord.ext import commands
-from discord.ui import Select, Button, View, Modal
+from discord.ui import Select, Button, View, Modal, InputText
 
-from discord import ApplicationContext, Colour, Embed, InputText, Interaction, Permissions, SlashCommandGroup, TextChannel
+from discord import ApplicationContext, Colour, Embed, Interaction, Permissions, SlashCommandGroup, TextChannel
 
 from core import checks
 from core.time import TimeConverter, InvalidTime
