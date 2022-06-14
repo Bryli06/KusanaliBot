@@ -2,9 +2,9 @@ import random
 
 import discord
 from discord.ext import commands
-from discord.ui import Select, Button, View
+from discord.ui import Select, Button, View, Modal
 
-from discord import ApplicationContext, Colour, Interaction, Permissions, SlashCommandGroup, TextChannel
+from discord import ApplicationContext, Colour, Embed, InputText, Interaction, Permissions, SlashCommandGroup, TextChannel
 
 from core import checks
 from core.time import TimeConverter, InvalidTime
@@ -21,6 +21,10 @@ class Giveaway(BaseCog):
     _id = "giveaway"
 
     default_cache = {
+        "tickets": {
+
+        },
+
         "giveaways": {
 
         }
@@ -210,7 +214,7 @@ class Giveaway(BaseCog):
 
         except InvalidTime as e:
             embed = discord.Embed(
-                    title="error", description=e,colour=Colour.red())
+                title="error", description=e, colour=Colour.red())
             await ctx.respond(embed=embed)
 
             return
@@ -224,7 +228,7 @@ class Giveaway(BaseCog):
             return
 
         # limits the roles shown to 25
-        allowed_roles=None
+        allowed_roles = None
 
         allowed_roles = Select(
             placeholder="Select allowed roles",
@@ -273,6 +277,41 @@ class Giveaway(BaseCog):
         roles_view = View(allowed_roles)
 
         await ctx.respond(view=roles_view, ephemeral=True)
+
+    @_ga.command(name="tickets", description="Lets you see and edit the tickets for roles.")
+    @checks.has_permissions(PermissionLevel.EVENT_ADMIN)
+    async def _ga_tickets(self, ctx: ApplicationContext):
+        """
+        Sends a modal that allows you to see and edit the tickets for each role.
+
+        """
+
+        await ctx.defer()
+
+        async def _tickets_callback(interaction: Interaction):
+            for role_id, text_field in zip(self.bot.config["levelRoles"], tickets_modal.children):
+                try:
+                    self.cache["tickets"].update(
+                        {str(role_id): int(text_field.value)})
+                except Exception:
+                    self.cache["tickets"].update({str(role_id): 0})
+
+            await self.update_db()
+
+            embed = discord.Embed(
+                title="Success", description="You've entered new ticket values.", colour=Colour.green())
+
+            await interaction.response.send_message(embed=embed)
+
+        tickets_modal = Modal(title="Role Tickets")
+
+        for role_id in self.bot.config["levelRoles"]:
+            tickets_modal.add_item(InputText(label=(await self.guild._fetch_role(role_id)).name, placeholder="0", required=False,
+                                             value=self.cache["tickets"][str(role_id)] if not None else "0"))
+
+        tickets_modal.callback = _tickets_callback
+
+        await ctx.send_modal(tickets_modal)
 
 
 def setup(bot):
