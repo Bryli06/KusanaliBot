@@ -307,7 +307,7 @@ class Giveaway(BaseCog):
 
         for role_id in self.bot.config["levelRoles"]:
             tickets_modal.add_item(InputText(label=(await self.guild._fetch_role(role_id)).name, placeholder="0", required=False,
-                                             value=self.cache["tickets"][str(role_id)] if not None else "0"))
+                                             value=self.cache["tickets"][str(role_id)] if str(role_id) in self.cache["tickets"] else "0"))
 
         tickets_modal.callback = _tickets_callback
 
