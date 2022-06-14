@@ -578,6 +578,11 @@ class Logging(BaseCog):
                               description=f"{member.mention} is the {ordinal(self.guild.approximate_member_count)} member.",
                               timestamp=member.joined_at, colour=Colour.green())
 
+        try:
+            embed.description = f"{member.mention} is the {ordinal(len(await self.guild.fetch_members(limit=None).get_members()))} member."
+        except Exception:
+            pass
+
         embed.set_author(
             name=f"{member.name}#{member.discriminator}", icon_url=member.avatar)
         embed.set_footer(text=member.id)
