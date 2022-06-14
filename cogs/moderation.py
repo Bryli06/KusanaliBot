@@ -77,6 +77,7 @@ class Moderation(BaseCog):
 #----------------------------------------ban and unbans----------------------------------------#
 
     @commands.slash_command(name="ban", description="Bans a member", default_member_permissions=Permissions(ban_members=True))
+    @commands.max_concurrency(1, wait=True)
     @checks.has_permissions(PermissionLevel.MOD)
     async def ban(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to ban."),
                   duration: discord.Option(str, description="The duration of the ban.", default="inf"),
@@ -85,7 +86,7 @@ class Moderation(BaseCog):
         Bans a member via /ban [members] [duration: Optional] [reason: Optional]
 
         """
-        
+
         after = None
         if duration != "inf":
             try:
@@ -93,7 +94,7 @@ class Moderation(BaseCog):
 
             except InvalidTime as e:
                 embed = discord.Embed(
-                        title="Error", description=e, colour=Colour.red())
+                    title="Error", description=e, colour=Colour.red())
                 await ctx.respond(embed=embed)
 
                 return
@@ -121,7 +122,7 @@ class Moderation(BaseCog):
             except:
                 self.logger.error(f"Could not message {member.name}.")
                 description += "but a message could not be sent.\n"
-            
+
             try:
                 await self.guild.ban(member, reason=reason)
                 description += f"The member {member.mention} `{member.name}#{member.discriminator}` has been successfully banned, "
@@ -129,9 +130,9 @@ class Moderation(BaseCog):
                 description += f"The member {member.mention} `{member.name}#{member.discriminator}` could not be banned.\n"
                 continue
 
-
             if after:
-                self.cache["unbanQueue"][str(member_id)] = after.final.timestamp()
+                self.cache["unbanQueue"][str(
+                    member_id)] = after.final.timestamp()
                 await self._unban(member_id, after.final.timestamp())
 
             self.cache["bans"].setdefault(str(member_id), []).append(
@@ -271,6 +272,7 @@ class Moderation(BaseCog):
 
 #----------------------------------------kicks----------------------------------------#
 
+
     @commands.slash_command(name="kick", description="Kicks a member", default_member_permissions=Permissions(kick_members=True))
     @checks.has_permissions(PermissionLevel.TRIAL_MOD)
     async def kick(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to kick."),
@@ -379,6 +381,7 @@ class Moderation(BaseCog):
         await ctx.respond(embed=embed)
 
     @commands.slash_command(name="mute", description="Mutes a member", default_member_permissions=Permissions(manage_messages=True))
+    @commands.max_concurrency(1, wait=True)
     @checks.has_permissions(PermissionLevel.TRIAL_MOD)
     async def mute(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to mute."),
                    duration: discord.Option(str, description="The duration of the mute.", default="inf"),
@@ -402,7 +405,7 @@ class Moderation(BaseCog):
 
             except InvalidTime as e:
                 embed = discord.Embed(
-                        title="Error", description=e, colour=Colour.red())
+                    title="Error", description=e, colour=Colour.red())
                 await ctx.respond(embed=embed)
 
                 return
@@ -448,7 +451,8 @@ class Moderation(BaseCog):
                 description += "but a message could not be sent.\n"
 
             if after:
-                self.cache["unmuteQueue"][str(member_id)] = after.final.timestamp()
+                self.cache["unmuteQueue"][str(
+                    member_id)] = after.final.timestamp()
                 await self._unmute(member_id, after.final.timestamp())
 
             self.cache["mutes"].setdefault(str(member_id), []).append(
@@ -880,8 +884,8 @@ class Moderation(BaseCog):
 
     @commands.slash_command(name="slowmode", description="Sets slowmode for a channel.", default_member_permissions=Permissions(manage_channels=True))
     @checks.has_permissions(PermissionLevel.MOD)
-    async def slowmode(self, ctx: ApplicationContext, 
-                  duration: discord.Option(str, description="The duration of the slowmode."), channel: discord.Option(discord.TextChannel, description="The channel you want to set slowmode.", default=None)):
+    async def slowmode(self, ctx: ApplicationContext, duration: discord.Option(str, description="The duration of the slowmode."),
+                       channel: discord.Option(discord.TextChannel, description="The channel you want to set slowmode.", default=None)):
         """
         Sets slowmode for a channel.
 
@@ -890,29 +894,32 @@ class Moderation(BaseCog):
                  r'((?P<minutes>-?\d+)m)?'
                  r'((?P<seconds>-?\d+)s)?')
         match = re.compile(regex, re.IGNORECASE).match(str(duration))
-        duration = None
+
+        seconds = None
 
         if match:
             for k, v in match.groupdict().items():
                 if v:
-                    if not duration:
-                        duration = 0
-                    if k == 'hours':
-                        duration += int(v)*3600
-                    elif k == "minutes":
-                        duration += int(v)*60
-                    elif k == "duration":
-                        duration += int(v)
+                    if not seconds:
+                        seconds = 0
 
-        if duration is None:
+                    if k == "hours":
+                        seconds += int(v) * 3600
+                    elif k == "minutes":
+                        seconds += int(v) * 60
+                    elif k == "seconds":
+                        seconds += int(v)
+
+        if seconds is None:
             embed = discord.Embed(
-                title="Error", description=f"Could not parse time: {time}. Make sure it is in the form []h[]m[]s.")
+                title="Error", description=f"Could not parse duration: {duration}. Make sure it is in the form []h[]m[]s.", colour=Colour.red())
             await ctx.respond(embed=embed)
+            
             return
 
         if duration > 21600:
             embed = discord.Embed(
-                title="Error", description=f"Duration {duration}s too large. Maximum slowmode is 6h (21600s).", colour=Colour.red())
+                title="Error", description=f"Duration {seconds}s too large. Maximum slowmode is 6h (21600s).", colour=Colour.red())
             await ctx.respond(embed=embed)
 
             return
@@ -926,24 +933,23 @@ class Moderation(BaseCog):
             title="Success", description=f"Successfully set slowmode in {channel.mention} to {duration}s.", colour=Colour.green())
         await ctx.respond(embed=embed)
 
-
     @commands.slash_command(name="purge", description="Purge messages.", default_member_permissions=Permissions(manage_messages=True))
     @checks.has_permissions(PermissionLevel.TRIAL_MOD)
-    async def purge(self, ctx: ApplicationContext, messages: discord.Option(int, description="Number of messages to search through.", min_value=1), 
-                user: discord.Option(discord.Member, description="User's messages to purge.", default=None)):
+    async def purge(self, ctx: ApplicationContext, messages: discord.Option(int, description="Number of messages to search through.", min_value=1),
+                    user: discord.Option(discord.Member, description="User's messages to purge.", default=None)):
         """
         Purges messages via /purge [number] [user: optional]
 
         """
 
         deleted = await ctx.channel.purge(limit=messages,
-                check=lambda m, user=user: (m.author.id == user.id and not m.pinned) if user else (not m.pinned)) #bruh what is this lambda function
+                                          check=lambda m, user=user: (m.author.id == user.id and not m.pinned) if user else (not m.pinned))  # bruh what is this lambda function
 
-        embed = discord.Embed(title="Success", description=f"Successfully purged {len(deleted)} messages.", colour=Colour.green())
+        embed = discord.Embed(
+            title="Success", description=f"Successfully purged {len(deleted)} messages.", colour=Colour.green())
         await ctx.respond(embed=embed)
 
-
-    @commands.slash_command(name="bonk", description="Bonk your enemies.", 
+    @commands.slash_command(name="bonk", description="Bonk your enemies.",
                             default_member_permissions=Permissions(manage_messages=True))
     @checks.has_permissions(PermissionLevel.STAFF)
     async def bonk(self, ctx: ApplicationContext, member: discord.Option(discord.Member, "Member to bonk.")):
