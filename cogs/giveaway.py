@@ -112,7 +112,7 @@ class Giveaway(BaseCog):
         enter = Button(label="Enter", style=discord.ButtonStyle.blurple)
         enter.callback = _enter_callback
 
-        enter_view = View(enter)
+        enter_view = View(enter, timeout=None)
 
         await message.edit(view=enter_view)
 
