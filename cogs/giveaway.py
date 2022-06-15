@@ -1,5 +1,7 @@
+import asyncio
 from math import ceil
 import random
+from wsgiref.headers import tspecials
 
 import discord
 from discord.ext import commands
@@ -124,8 +126,16 @@ class Giveaway(BaseCog):
 
     def giveaway_end(self, message: discord.Message):
         """
-        Ends the giveaway from the message.
+        Calls asynchronous function to end giveaway.
 
+        """
+
+        self.bot.loop.create_task(self._giveaway_end(message))
+
+    async def _giveaway_end(self, message: discord.Message):
+        """
+        Ends an active giveaway.
+        
         """
 
         if message == None or str(message.id) not in self.cache["giveaways"]:
@@ -139,7 +149,7 @@ class Giveaway(BaseCog):
 
         weights = []
         for member_id in participants:
-            member = self.bot.loop.create_task(self.guild.fetch_member(member_id)).result()
+            member = await self.guild.fetch_member(member_id)
 
             all_tickets = [0]
             for role_id in self.bot.config["levelRoles"]:
@@ -156,10 +166,10 @@ class Giveaway(BaseCog):
             embed = discord.Embed(
                 title="Giveaway has ended!", description="The giveaway has ended with no winners.", colour=Colour.blue())
 
-            self.bot.loop.create_task(message.edit(embed=embed, view=None))
+            await message.edit(embed=embed, view=None)
 
             self.cache["giveaways"].pop(str(message.id))
-            self.bot.loop.create_task(self.update_db())
+            await self.update_db()
 
             return
 
@@ -192,10 +202,10 @@ class Giveaway(BaseCog):
         embed.description = description
         embed.clear_fields()
 
-        self.bot.loop.create_task(message.edit(embed=embed, view=None))
+        await message.edit(embed=embed, view=None)
 
         self.cache["giveaways"].pop(str(message.id))
-        self.bot.loop.create_task(self.update_db())
+        await self.update_db()
 
     @commands.message_command(name="End giveaway")
     @checks.has_permissions(PermissionLevel.EVENT_ADMIN)
