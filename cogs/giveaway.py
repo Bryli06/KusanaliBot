@@ -1,4 +1,5 @@
 import asyncio
+import copy
 from math import ceil
 import random
 from wsgiref.headers import tspecials
@@ -149,8 +150,15 @@ class Giveaway(BaseCog):
         participants = cache["participants"]
 
         weights = []
-        for member_id in participants:
-            member = await self.guild.fetch_member(member_id)
+
+        member_ids = copy.deepcopy(participants)
+        for member_id in member_ids:
+            try:
+                member = await self.guild.fetch_member(member_id)
+            except Exception:
+                participants.remove(member_id)
+
+                continue
 
             all_tickets = [0]
             for role_id in self.bot.config["levelRoles"]:
