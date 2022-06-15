@@ -1,3 +1,4 @@
+from asyncio.log import logger
 import os
 import discord
 from discord.ext import commands
@@ -441,7 +442,9 @@ class Moderation(BaseCog):
 
                 description += f"The member {member.mention} `{member.name}#{member.discriminator}` has been successfully muted, "
             except Exception as e:
+                self.bot.dispatch("on_error", e)
                 description += f"The member {member.mention} `{member.name}#{member.discriminator}` could not be muted.\n"
+                
                 continue
 
             try:
