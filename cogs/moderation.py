@@ -442,9 +442,9 @@ class Moderation(BaseCog):
 
                 description += f"The member {member.mention} `{member.name}#{member.discriminator}` has been successfully muted, "
             except Exception as e:
-                self.bot.dispatch("on_error", e)
+                self.bot.dispatch("error", e)
                 description += f"The member {member.mention} `{member.name}#{member.discriminator}` could not be muted.\n"
-                
+
                 continue
 
             try:
