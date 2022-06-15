@@ -137,6 +137,20 @@ class Giveaway(BaseCog):
         winners = cache["winners"]
         participants = cache["participants"]
 
+        weights = []
+        for member_id in participants:
+            member = self.bot.loop.create_task(self.guild.fetch_member(member_id)).result()
+
+            all_tickets = [0]
+            for role_id in self.bot.config["levelRoles"]:
+                if member.get_role(role_id):
+                    if str(role_id) in self.cache["tickets"]:
+                        all_tickets.append(self.cache["tickets"][str(role_id)])
+                    else:
+                        all_tickets.append(1)
+
+            weights.append(max(all_tickets))
+
         # end giveaway with no winners
         if len(participants) == 0:
             embed = discord.Embed(
@@ -156,10 +170,14 @@ class Giveaway(BaseCog):
             winner_ids = participants
         else:
             for i in range(winners):
-                winner_id = random.choice(participants)
+                winner_id = random.choices(participants, weights)
 
                 winner_ids.append(winner_id)
-                participants.remove(winner_id)
+
+                index = participants.index(winner_id)
+
+                participants.pop(index)
+                weights.pop(index)
 
         description = "Congratulations to:\n"
         for winner_id in winner_ids:
