@@ -291,7 +291,7 @@ class Giveaway(BaseCog):
         if len(self.cache["tickets"]) == 0:
             embed = Embed(
                 title="Error", description="No tickets were set for any role.", colour=Colour.red())
-            ctx.respond(embed=embed)
+            await ctx.respond(embed=embed)
 
             return
 
@@ -303,7 +303,7 @@ class Giveaway(BaseCog):
 
         embed.description = description
 
-        ctx.respond(embed=embed)
+        await ctx.respond(embed=embed)
 
     @_tc.command(name="set", description="Sets the tickets amount for a role.")
     @checks.has_permissions(PermissionLevel.EVENT_ADMIN)
@@ -317,7 +317,7 @@ class Giveaway(BaseCog):
         if str(role.id) not in self.cache["tickets"]:
             embed = Embed(
                 title="Error", description="Role not found in the database.", colour=Colour.red())
-            ctx.respond(embed=embed)
+            await ctx.respond(embed=embed)
 
             return
 
@@ -327,7 +327,7 @@ class Giveaway(BaseCog):
 
         embed = Embed(
             title="Success", description=f"New tickets amount set for {role.mention}.", colour=Colour.green())
-        ctx.respond(embed=embed)
+        await ctx.respond(embed=embed)
 
 
 def setup(bot):
