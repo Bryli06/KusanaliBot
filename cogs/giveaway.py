@@ -313,7 +313,7 @@ class Giveaway(BaseCog):
 
             tickets_modal.callback = _tickets_callback
 
-            await ctx.send_modal(tickets_modal)
+            await ctx.response.send_modal(tickets_modal)
             await tickets_modal.wait()
 
 
