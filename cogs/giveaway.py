@@ -314,14 +314,14 @@ class Giveaway(BaseCog):
 
         """
 
-        if str(role.id) not in self.bot.config["levelRoles"]:
+        if role.id not in self.bot.config["levelRoles"]:
             embed = Embed(
                 title="Error", description="Role not found in the database.", colour=Colour.red())
             await ctx.respond(embed=embed)
 
             return
 
-        self.cache["tickets"][str(role.id)] = tickets
+        self.cache["tickets"].update({str(role.id): tickets})
 
         await self.update_db()
 
