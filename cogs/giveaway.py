@@ -33,6 +33,7 @@ class Giveaway(BaseCog):
 
     _ga = SlashCommandGroup("giveaway", "Contains all giveaway commands.",
                             default_member_permissions=Permissions(manage_messages=True))
+    _tc = _ga.create_subgroup("tickets", "Contains all tickets commands.")
 
     async def after_load(self):
         await self.start_countdowns()
@@ -279,53 +280,55 @@ class Giveaway(BaseCog):
 
         await ctx.respond(view=roles_view, ephemeral=True)
 
-    @_ga.command(name="tickets", description="Lets you see and edit the tickets for roles.")
+    @_tc.command(name="list", description="Shows tickets for all roles.")
     @checks.has_permissions(PermissionLevel.EVENT_ADMIN)
-    async def _ga_tickets(self, ctx: ApplicationContext):
+    async def _tc_list(self, ctx: ApplicationContext):
         """
-        Sends a modal that allows you to see and edit the tickets for each role.
+        Shows the tickets for each role.
 
         """
 
-        await ctx.defer()
+        if len(self.cache["tickets"]) == 0:
+            embed = Embed(
+                title="Error", description="No tickets were set for any role.", colour=Colour.red())
+            ctx.respond(embed=embed)
 
-        async def _tickets_callback(interaction: Interaction):
-            i: int = _tickets_callback.i
-            modal: Modal = _tickets_callback.modal
+            return
 
-            for role_id, text_field in zip(self.bot.config["levelRoles"][i*5:i*6], modal.children):
-                try:
-                    self.cache["tickets"].update(
-                        {str(role_id): int(text_field.value)})
-                except Exception:
-                    self.cache["tickets"].update({str(role_id): 0})
+        embed = Embed(title="Role tickets", colour=Colour.blue())
 
-            await self.update_db()
+        description = ""
+        for role_id in self.cache["tickets"]:
+            description += f"{(await self.guild._fetch_role(int(role_id))).mention}: {self.cache['tickets'][role_id]}\n"
 
-            await _send_modal(interaction, i + 1)
+        embed.description = description
 
-        async def _send_modal(interaction: Interaction, i):
-            if i > ceil(len(self.bot.config["levelRoles"]) / 5):
-                embed = discord.Embed(
-                title="Success", description="You've entered new ticket values.", colour=Colour.green())
-                ctx.respond(embed=embed)
+        ctx.respond(embed=embed)
 
-                return
+    @_tc.command(name="set", description="Sets the tickets amount for a role.")
+    @checks.has_permissions(PermissionLevel.EVENT_ADMIN)
+    async def _tc_set(self, ctx: ApplicationContext, role: discord.Option(discord.Role, "The roles you want to change the tickets amount for."),
+                      tickets: discord.Option(int, "The tickets amount.", min_value=0)):
+        """
+        Sets the tickets amount for a role in the database.
 
-            tickets_modal = Modal(title="Role Tickets")
+        """
 
-            for role_id in self.bot.config["levelRoles"][i*5:i*6]:
-                tickets_modal.add_item(InputText(label=(await self.guild._fetch_role(role_id)).name, placeholder="0", required=False,
-                                                    value=self.cache["tickets"][str(role_id)] if str(role_id) in self.cache["tickets"] else "0"))
+        if str(role.id) not in self.cache["tickets"]:
+            embed = Embed(
+                title="Error", description="Role not found in the database.", colour=Colour.red())
+            ctx.respond(embed=embed)
 
-            _tickets_callback.i = i
-            _tickets_callback.modal = tickets_modal
+            return
 
-            tickets_modal.callback = _tickets_callback
+        self.cache["tickets"][str(role.id)] = tickets
 
-            await interaction.response.send_modal(tickets_modal)
+        await self.update_db()
 
-        await _send_modal(ctx.interaction, 0)
+        embed = Embed(
+            title="Success", description=f"New tickets amount set for {role.mention}.", colour=Colour.green())
+        ctx.respond(embed=embed)
+
 
 def setup(bot):
     bot.add_cog(Giveaway(bot))
