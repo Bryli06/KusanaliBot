@@ -290,7 +290,10 @@ class Giveaway(BaseCog):
         await ctx.defer()
 
         async def _tickets_callback(interaction: Interaction):
-            for role_id, text_field in zip(self.bot.config["levelRoles"][i*5:i*6], tickets_modal.children):
+            i: int = _tickets_callback.i
+            modal: Modal = _tickets_callback.modal
+
+            for role_id, text_field in zip(self.bot.config["levelRoles"][i*5:i*6], modal.children):
                 try:
                     self.cache["tickets"].update(
                         {str(role_id): int(text_field.value)})
@@ -299,23 +302,30 @@ class Giveaway(BaseCog):
 
             await self.update_db()
 
-            embed = discord.Embed(
+            await _send_modal(interaction, i + 1)
+
+        async def _send_modal(interaction: Interaction, i):
+            if i > ceil(len(self.bot.config["levelRoles"]) / 5):
+                embed = discord.Embed(
                 title="Success", description="You've entered new ticket values.", colour=Colour.green())
+                ctx.respond(embed=embed)
 
-            await interaction.response.send_message(embed=embed)
+                return
 
-        for i in range(ceil(len(self.bot.config["levelRoles"]) / 5)):
             tickets_modal = Modal(title="Role Tickets")
 
             for role_id in self.bot.config["levelRoles"][i*5:i*6]:
                 tickets_modal.add_item(InputText(label=(await self.guild._fetch_role(role_id)).name, placeholder="0", required=False,
-                                                 value=self.cache["tickets"][str(role_id)] if str(role_id) in self.cache["tickets"] else "0"))
+                                                    value=self.cache["tickets"][str(role_id)] if str(role_id) in self.cache["tickets"] else "0"))
+
+            _tickets_callback.i = i
+            _tickets_callback.modal = tickets_modal
 
             tickets_modal.callback = _tickets_callback
 
-            await ctx.response.send_modal(tickets_modal)
-            await tickets_modal.wait()
+            await interaction.response.send_modal(tickets_modal)
 
+        await _send_modal(ctx.interaction, 0)
 
 def setup(bot):
     bot.add_cog(Giveaway(bot))
