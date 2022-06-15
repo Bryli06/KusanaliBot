@@ -95,7 +95,7 @@ async def check_permissions(ctx: commands.Context, permission_level) -> bool:
         if ctx.channel.permissions_for(ctx.author).administrator:
             return True
     else:
-        return False
+        raise commands.CheckFailure("You do not have the required permissions.")
 
     # check for section admin
     if permission_level is not PermissionLevel.ADMINISTRATOR:
@@ -105,21 +105,21 @@ async def check_permissions(ctx: commands.Context, permission_level) -> bool:
         if  ctx.author.get_role(ctx.bot.config["eventAdmin"]) != None:
             return True
     else:
-        return False
+        raise commands.CheckFailure("You do not have the required permissions.")
 
     # check for mod
     if permission_level is not PermissionLevel.TC_ADMIN and permission_level is not PermissionLevel.EVENT_ADMIN:
         if ctx.author.get_role(ctx.bot.config["mod"]) != None:
             return True
     else:
-        return False
+        raise commands.CheckFailure("You do not have the required permissions.")
 
     # check for trial mod
     if permission_level is not PermissionLevel.MOD:
         if ctx.author.get_role(ctx.bot.config["trialMod"]) != None:
             return True
     else:
-        return False
+        raise commands.CheckFailure("You do not have the required permissions.")
 
     # check for section mod
     if permission_level is not PermissionLevel.TRIAL_MOD:
@@ -129,14 +129,14 @@ async def check_permissions(ctx: commands.Context, permission_level) -> bool:
         if  ctx.author.get_role(ctx.bot.config["eventMod"]) != None:
             return True
     else:
-        return False
+        raise commands.CheckFailure("You do not have the required permissions.")
 
     # check for staff
     if permission_level is not PermissionLevel.TC_MOD and permission_level is not PermissionLevel.EVENT_MOD:
         if ctx.channel.permissions_for(ctx.author).manage_messages:
             return True
     else:
-        return False
+        raise commands.CheckFailure("You do not have the required permissions.")
 
     # check for regular user
     if permission_level is PermissionLevel.REGULAR:
