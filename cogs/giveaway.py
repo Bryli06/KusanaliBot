@@ -145,6 +145,7 @@ class Giveaway(BaseCog):
 
         reward = cache["reward"]
         winners = cache["winners"]
+        allowed_roles = cache["allowedRoles"]
         participants = cache["participants"]
 
         weights = []
@@ -153,11 +154,12 @@ class Giveaway(BaseCog):
 
             all_tickets = [0]
             for role_id in self.bot.config["levelRoles"]:
-                if member.get_role(role_id):
-                    if str(role_id) in self.cache["tickets"]:
-                        all_tickets.append(self.cache["tickets"][str(role_id)])
-                    else:
-                        all_tickets.append(1)
+                if role_id in allowed_roles:
+                    if member.get_role(role_id):
+                        if str(role_id) in self.cache["tickets"]:
+                            all_tickets.append(self.cache["tickets"][str(role_id)])
+                        else:
+                            all_tickets.append(1)
 
             weights.append(max(all_tickets))
 
@@ -180,7 +182,7 @@ class Giveaway(BaseCog):
             winner_ids = participants
         else:
             for i in range(winners):
-                winner_id = random.choices(participants, weights)
+                winner_id = random.choices(participants, weights)[0]
 
                 winner_ids.append(winner_id)
 
