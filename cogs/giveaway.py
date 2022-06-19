@@ -1,13 +1,9 @@
-import asyncio
-from asyncio.log import logger
 import copy
-from math import ceil
 import random
-from wsgiref.headers import tspecials
 
 import discord
 from discord.ext import commands
-from discord.ui import Select, Button, View, Modal, InputText
+from discord.ui import Select, Button, View
 
 from discord import ApplicationContext, Colour, Embed, Interaction, Permissions, SlashCommandGroup, TextChannel
 
@@ -17,7 +13,6 @@ from core.base_cog import BaseCog
 from core.checks import PermissionLevel
 
 from datetime import datetime
-import time
 
 from copy import deepcopy
 
@@ -172,8 +167,6 @@ class Giveaway(BaseCog):
 
             weights.append(max(all_tickets))
 
-        logger.info(f"{len(participants)} {len(weights)}")
-
         # end giveaway with no winners
         if len(participants) == 0:
             embed = discord.Embed(
@@ -251,6 +244,9 @@ class Giveaway(BaseCog):
         Creates a new giveaway.
 
         """
+
+        await ctx.defer()
+        
         duration = 0
         try:
             duration = TimeConverter(end)
