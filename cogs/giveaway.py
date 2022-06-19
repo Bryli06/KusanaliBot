@@ -1,4 +1,5 @@
 import asyncio
+from asyncio.log import logger
 import copy
 from math import ceil
 import random
@@ -170,6 +171,8 @@ class Giveaway(BaseCog):
                             all_tickets.append(1)
 
             weights.append(max(all_tickets))
+
+        logger.info(f"{len(participants)} {len(weights)}")
 
         # end giveaway with no winners
         if len(participants) == 0:
