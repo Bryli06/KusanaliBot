@@ -102,7 +102,7 @@ class Modmail(BaseCog):
 
         await self.update_db()
 
-    @commands.slash_command(name="reply", description="Replies to a user in a modmail thread.", default_member_permissions=Permissions(manage_messages=True))
+    @commands.slash_command(name="reply", description="Replies to a user in a modmail thread.", default_member_permissions=Permissions(manage_threads=True))
     @checks.has_permissions(PermissionLevel.MOD)
     @checks.only_modmail_thread(_modmail_channel_id)
     async def reply(self, ctx: ApplicationContext, message: discord.Option(str, "The message you wish to reply with.")):
