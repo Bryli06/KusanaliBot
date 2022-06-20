@@ -249,6 +249,9 @@ class Logging(BaseCog):
         if message.author.bot:
             return
 
+        if message.channel.id == 984616712706068510:
+            return
+
         embed = discord.Embed(title=f"Message deleted in #{message.channel.name}",
                               description=message.content, timestamp=message.created_at, colour=Colour.red())
 
@@ -283,6 +286,9 @@ class Logging(BaseCog):
             return
 
         if before.content == after.content:
+            return
+
+        if after.channel.id == 984616712706068510:
             return
 
         embed = discord.Embed(title=f"Message edited in #{before.channel.name}",

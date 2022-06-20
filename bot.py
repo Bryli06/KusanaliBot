@@ -47,6 +47,7 @@ class KusanaliBot(commands.Bot):
         self.loop.create_task(self.wait_for_tasks())
 
     def on_start(self):
+
         # loads the cogs into the bot
         for cog in [file.replace('.py', '') for file in listdir("cogs") if isfile(join('cogs', file))]:
             logger.info(f"Loading cog: {cog}")
@@ -76,6 +77,10 @@ class KusanaliBot(commands.Bot):
             except Exception as e:
                 logger.error(f"Failed to execute after load for {cog}")
                 logger.error(f"Error: {e}")
+        
+        # sets the status of the bot
+        await self.change_presence(activity=discord.Activity(
+                                    type=discord.ActivityType.watching, name='over the server'))
 
     async def get_session(self):
         if self.session is None:
