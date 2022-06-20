@@ -115,13 +115,15 @@ class Moderation(BaseCog):
             if member == None:
                 description += f"The member with ID `{member_id}` was not found.\n"
                 continue
+            
+            addition = ""
 
             try:
                 await member.send(f"You have been banned from {self.guild.name}. Reason: {reason}")
-                description += "and a message has been sent.\n"
+                addition = "and a message has been sent.\n"
             except:
                 self.logger.error(f"Could not message {member.name}.")
-                description += "but a message could not be sent.\n"
+                addition = "but a message could not be sent.\n"
 
             try:
                 await self.guild.ban(member, reason=reason)
@@ -129,6 +131,8 @@ class Moderation(BaseCog):
             except Exception as e:
                 description += f"The member {member.mention} `{member.name}#{member.discriminator}` could not be banned.\n"
                 continue
+            
+            description+= addition
 
             if after:
                 self.cache["unbanQueue"][str(
@@ -301,6 +305,15 @@ class Moderation(BaseCog):
                 description += f"The member with ID `{member_id}` was not found.\n"
                 continue
 
+            addition = ""
+
+            try:
+                await member.send(f"You have been kicked from {self.guild.name}. Reason: {reason}")
+                addition = "and a message has been sent.\n"
+            except:
+                self.logger.error(f"Could not message {member.name}.")
+                addition = "but a message could not be sent.\n"
+
             try:
                 await self.guild.kick(member, reason=reason)
                 description += f"The member {member.mention} `{member.name}#{member.discriminator}` has been successfully kicked, "
@@ -308,13 +321,8 @@ class Moderation(BaseCog):
                 description += f"The member {member.mention} `{member.name}#{member.discriminator}` could not be kicked.\n"
                 continue
 
-            try:
-                await member.send(f"You have been kicked from {self.guild.name}. Reason: {reason}")
-                description += "and a message has been sent.\n"
-            except:
-                self.logger.error(f"Could not message {member.name}.")
-                description += "but a message could not be sent.\n"
-
+            description += addition
+            
             self.cache["kicks"].setdefault(str(member_id), []).append(
                 {"responsible": ctx.author.id, "reason": reason, "time": datetime.now().timestamp()})
 
