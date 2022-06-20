@@ -100,8 +100,16 @@ class Salute(BaseCog):
 
         if self.cache["embeds"]["welcome"] is not None and self.cache["embeds"]["welcome"] != "":
             wlc_embed = copy.deepcopy(self.cache["embeds"]["welcome"])
-            wlc_embed["title"] = await self.translate_message(member, wlc_embed["title"], channel)
-            wlc_embed["description"] = await self.translate_message(member, wlc_embed["description"], channel)
+
+            try:
+                wlc_embed["title"] = await self.translate_message(member, wlc_embed["title"], channel)
+            except KeyError:
+                pass
+            
+            try:
+                wlc_embed["description"] = await self.translate_message(member, wlc_embed["description"], channel)
+            except KeyError:
+                pass
 
             await channel.send(embed=await self.json_to_embed(wlc_embed))
 
@@ -120,8 +128,16 @@ class Salute(BaseCog):
 
         if self.cache["embeds"]["farewell"] is not None and self.cache["embeds"]["farewell"] != "":
             frw_embed = copy.deepcopy(self.cache["embeds"]["farewell"])
-            frw_embed["title"] = await self.translate_message(member, frw_embed["title"], channel)
-            frw_embed["description"] = await self.translate_message(member, frw_embed["description"], channel)
+
+            try:
+                frw_embed["title"] = await self.translate_message(member, frw_embed["title"], channel)
+            except KeyError:
+                pass
+
+            try:
+                frw_embed["description"] = await self.translate_message(member, frw_embed["description"], channel)
+            except KeyError:
+                pass
 
             await channel.send(embed=await self.json_to_embed(frw_embed))
 
