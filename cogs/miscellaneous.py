@@ -7,10 +7,10 @@ from core import checks
 from core.base_cog import BaseCog
 from core.checks import PermissionLevel
 
-class Miscellaneous(commands.Cog):
-
-    def __init__(self, bot):
-        self.bot = bot
+class Miscellaneous(BaseCog):
+    _id="miscellaneous"
+    
+    default_cache={}
 
     @commands.slash_command(name="usage", description="Gets Usage")
     @checks.has_permissions(PermissionLevel.REGULAR)
