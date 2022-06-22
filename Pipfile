@@ -37,6 +37,7 @@ python-dateutil = "*"
 parsedatetime = "*"
 pillow = "*"
 dateparser = "*"
+psutil = "*"
 
 [dev-packages]
 

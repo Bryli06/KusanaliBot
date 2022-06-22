@@ -31,3 +31,4 @@ virtualenv-clone==0.5.7
 yarg==0.1.9
 yarl==1.7.2
 dateparser==1.1.1
+psutil==5.9.1
