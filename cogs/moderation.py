@@ -997,14 +997,6 @@ class Moderation(BaseCog):
 
         await ctx.respond(":(" if member.id == 906318377432281088 else member.mention, file=file)
 
-    @commands.slash_command(name="feet", description="feet", default_member_permissions=Permissions(manage_messages=True))
-    @checks.has_permissions(PermissionLevel.TRIAL_MOD)
-    async def feet(self, ctx: ApplicationContext):
-        file = discord.File(
-            f"./assets/feet/{random.choice(os.listdir('./assets/feet/'))}")
-
-        await ctx.defer()
-        await ctx.respond(file=file)
 
 
 def setup(bot):
