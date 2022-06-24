@@ -20,40 +20,64 @@ class Countdown(BaseCog):
 
     kusanali_drop = 1664002800
 
-    default_cache = {
-        "countdowns": {
-
-        },
-    }
+    default_cache = { }
 
     _cd = SlashCommandGroup("countdown", "Manages countdown channels.",
                             default_member_permissions=Permissions(manage_messages=True))
 
+    async def load_cache(self): #each countdown gets its own document
+        cursor = self.db.find({ })
+        docs = await cursor.to_list(length=10) #how many documents to buffer shouldn't be too high
+        while docs:
+            for document in docs:
+                self.cache[str(document.get("_id"))] = {"name": document.get("name"), "date": document.get("date")}
+
+            docs = await cursor.to_list(length=10)
+        
+        self.guild: discord.Guild = await self.bot.fetch_guild(self.bot.config["guild_id"])
+        
+        self.bot.tasks_done = self.bot.tasks_done + 1
+
+            
+
+
+    async def update_db(self, _id): #we need a different insert command that allows us to insert into seperate documents
+        if _id not in self.cache:
+            await self.db.delete_one({"_id": _id})
+            return
+
+        await self.db.find_one_and_update(
+            {"_id": _id},
+            {"$set": self.cache[_id]},
+            upsert=True,
+        )
+
     async def after_load(self):
-        for k, v in list(self.cache["countdowns"].items()):
+        for k, v in list(self.cache.items()):
             await self.start_countdown(k)
 
     async def start_countdown(self, channel_id):
         channel = await self.guild.fetch_channel(int(channel_id))
 
         if not channel:
-            self.cache["countdowns"].pop(str(channel_id))
-            await self.update_db()
+            self.cache.pop(str(channel_id))
+            await self.update_db(str(channel_id))
             
             return
 
         while True:
-            if not await self.update(self.cache["countdowns"][str(channel_id)]["name"], self.cache["countdowns"][str(channel_id)]["date"].replace(tzinfo=timezone.utc), channel):
+            if not await self.update(self.cache[str(channel_id)]["name"], self.cache[str(channel_id)]["date"].replace(tzinfo=timezone.utc), channel):
                 return
 
     async def update(self, name, date, channel):
         diff = relativedelta.relativedelta(date,
                                             datetime.now(timezone.utc))
+
         if date < datetime.now(timezone.utc):
             await channel.edit(name=name)
-            self.cache["countdowns"].pop(str(channel.id))
+            self.cache.pop(str(channel.id))
 
-            await self.update_db()
+            await self.update_db(str(channel.id))
 
             return False
 
@@ -137,8 +161,8 @@ class Countdown(BaseCog):
 
             return
 
-        self.cache["countdowns"][str(vc.id)] = {"name": name, "date": date}
-        await self.update_db()
+        self.cache[str(vc.id)] = {"name": name, "date": date}
+        await self.update_db(str(vc.id))
 
         self.bot.loop.create_task(self.start_countdown(str(vc.id)))
 
