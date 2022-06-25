@@ -834,7 +834,7 @@ class Logging(BaseCog):
 
         for attachment in message.attachments:
             if attachment.filename.endswith('.png') or attachment.filename.endswith('.jpeg') or attachment.filename.endswith('.gif') or attachment.filename.endswith('.jpg'):
-                image = process.preprocess_image(Image.open(BytesIO(requests.get(url).content)), process.Preprocessing.YAHOO)
+                image = process.preprocess_image(Image.open(BytesIO(requests.get(attachment.url).content)), process.Preprocessing.YAHOO)
                 value = self.model.predict(np.expand_dims(image, axis=0))[0][1]
                 file = await attachment.to_file()
                 channel = await self.guild.fetch_channel(self.cache["imgChannel"])
