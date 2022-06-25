@@ -2,6 +2,7 @@ import math
 import os
 import discord
 from discord.ext import commands
+from datetime import datetime
 
 from discord import Colour, Permissions
 
@@ -439,11 +440,11 @@ class Leveling(BaseCog):
         for message in messages:
             if not message.author.bot:
                 if message.author != user:
-                    await self.add_exp(user)
+                    await self.add_exp(user, channel)
 
                 return
 
-    async def add_exp(self, user: discord.Member):
+    async def add_exp(self, user: discord.Member, channel: discord.TextChannel):
         """
         Adds exp to the member, if the member reaches a new level it checks if there are any level events available for that level.
 
@@ -461,6 +462,13 @@ class Leveling(BaseCog):
         level = calculate_level.inverse(exp) + 1
 
         if exp + self.exp_given >= next_level:
+
+            embed = discord.Embed(title="Level Up", description=f"Congradulations! You have reached level {level}, {user.mention}", colour=Colour.green(), timestamp=datetime.now())
+            embed.set_thumbnail(url=user.display_avatar.url)
+
+            await channel.send(embed=embed)
+
+
             if str(level) in self.cache["levelEvents"]:
                 for level_event in self.cache["levelEvents"][str(level)]:
                     role = await self.guild._fetch_role(level_event["role"])
