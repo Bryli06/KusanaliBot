@@ -3,6 +3,13 @@ from copy import deepcopy
 from datetime import datetime
 import time
 import discord
+import requests
+import numpy as np
+from io import BytesIO
+from PIL import Image
+from core.nsfw_model import nsfwDrawing as nd
+from core.nsfw_model import process
+
 from discord.ext import commands
 
 from discord import ApplicationContext, Colour, Embed, OptionChoice, Permissions, SlashCommandGroup
@@ -22,8 +29,13 @@ class Logging(BaseCog):
         "srvChannel": None,
         "jlvChannel": None,
         "mbrChannel": None,
+        "imgChannel": None,
         "errChannel": None
     }
+
+    def __init__(self, bot):
+        self.model = nd.make_model()
+        super().__init__(bot)
 
     _lg = SlashCommandGroup("log", "Contains all the commands for logging.",
                             default_member_permissions=Permissions(manage_messages=True))
@@ -286,6 +298,7 @@ class Logging(BaseCog):
             return
 
         if before.content == after.content:
+            await self.embed_check(after)
             return
 
         if after.channel.id == 984616712706068510:
@@ -813,13 +826,62 @@ class Logging(BaseCog):
 
         await chn.send(embed=embed)
 
+#-----------------------------------Media Log------------------------------#
+    @commands.Cog.listener()
+    async def on_message(self, message):
+        if message.author.bot or message.channel.id == 984616712706068510:
+            return
+
+        for attachment in message.attachments:
+            if attachment.filename.endswith('.png') or attachment.filename.endswith('.jpeg') or attachment.filename.endswith('.gif') or attachment.filename.endswith('.jpg'):
+                image = process.preprocess_image(Image.open(BytesIO(requests.get(url).content)), process.Preprocessing.YAHOO)
+                value = self.model.predict(np.expand_dims(image, axis=0))[0][1]
+                file = await attachment.to_file()
+                channel = await self.guild.fetch_channel(self.cache["imgChannel"])
+                if channel:
+                    embed = discord.Embed(title=f"NSFW Value: {value}",
+                                    description=f"[Jump to Message]({message.jump_url})",
+                                    colour=Colour.blue(),
+                                    timestamp=datetime.now())
+                    embed.set_author(name=message.author.name, icon_url=message.author.avatar)
+                    embed.set_footer(text=f"U: {message.author.id} | C: {message.channel.id} | M: {message.id}")
+                            
+                    await channel.send(file=file, embed=embed)
+
+        await self.embed_check(message)
+
+
+    async def embed_check(self, message):
+        for attachment in message.embeds:
+            if attachment.thumbnail:
+                await self.value(attachment.thumbnail.url, message)
+            
+            if attachment.image:
+                await self.value(attachment.image.url, message)
+
+
+    async def value(self, url, message) -> float:
+        image = process.preprocess_image(Image.open(BytesIO(requests.get(url).content)), process.Preprocessing.YAHOO)
+        value = self.model.predict(np.expand_dims(image, axis=0))[0][1]
+        channel = await self.guild.fetch_channel(self.cache["imgChannel"])
+        if channel:
+            embed = discord.Embed(title=f"NSFW Value: {value}",
+                                    description=f"[Jump to Message]({message.jump_url})",
+                                    colour=Colour.blue(),
+                                    timestamp=datetime.now())
+            embed.set_author(name=message.author.name, icon_url=message.author.avatar)
+            embed.set_footer(text=f"U: {message.author.id} | C: {message.channel.id} | M: {message.id}")
+                            
+            await channel.send(content=url, embed=embed)
+
+
     @ _lg.command(name="set", description="Sets a logs channel.")
     @ checks.has_permissions(PermissionLevel.ADMINISTRATOR)
     async def _lg_set(self, ctx: ApplicationContext, log_channel: discord.Option(str, "The channel you want to set. Log channel is the default if none is set.",
                       choices=[OptionChoice("Logs channel", "logChannel"), OptionChoice("Moderation logs channel", "modChannel"), OptionChoice("Message logs channel", "msgChannel"),
                                OptionChoice("Server logs channel", "srvChannel"), OptionChoice(
                                    "Join/Leave logs channel", "jlvChannel"), OptionChoice("Member logs channel", "mbrChannel"),
-                               OptionChoice("Error logs channel", "errChannel")]),
+                               OptionChoice("Media logs channel", "imgChannel"), OptionChoice("Error logs channel", "errChannel")]),
                       channel: discord.Option(discord.TextChannel, "The channel id you want to set the channel as.")):
         if await self.guild.fetch_channel(channel.id) == None:
             embed = discord.Embed(
@@ -838,6 +900,7 @@ class Logging(BaseCog):
             "srvChannel": "server ",
             "jlvChannel": "join/leave ",
             "mbrChannel": "member ",
+            "imgChannel": "Media ",
             "errChannel": "error "
         }
 
@@ -866,6 +929,7 @@ class Logging(BaseCog):
             "msgChannel": "message ",
             "srvChannel": "server ",
             "jlvChannel": "join/leave ",
+            "imgChannel": "Media ",
             "mbrChannel": "member "
         }
 
@@ -883,6 +947,7 @@ class Logging(BaseCog):
             "srvChannel": "Server ",
             "jlvChannel": "Join/Leave ",
             "mbrChannel": "Member ",
+            "imgChannel": "Media ",
             "errChannel": "Error "
         }
 

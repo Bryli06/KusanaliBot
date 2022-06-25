@@ -38,6 +38,9 @@ parsedatetime = "*"
 pillow = "*"
 dateparser = "*"
 psutil = "*"
+numpy = "*"
+tensorflow-cpu = "*"
+scikit-image = "*"
 
 [dev-packages]
 
