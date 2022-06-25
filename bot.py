@@ -78,9 +78,6 @@ class KusanaliBot(commands.Bot):
                 logger.error(f"Failed to execute after load for {cog}")
                 logger.error(f"Error: {e}")
         
-        # sets the status of the bot
-        await self.change_presence(activity=discord.Activity(
-                                    type=discord.ActivityType.watching, name='over the server'))
 
     async def get_session(self):
         if self.session is None:
@@ -188,6 +185,12 @@ class KusanaliBot(commands.Bot):
             except KeyboardInterrupt:
                 # I am unsure why this gets raised here but suppress it anyway
                 return None
+
+
+    async def on_ready(self):
+        # sets the status of the bot
+        await self.change_presence(activity=discord.Activity(
+                                    type=discord.ActivityType.watching, name='over the server'))
 
 
 def main():
