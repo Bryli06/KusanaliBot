@@ -30,7 +30,8 @@ class Logging(BaseCog):
         "jlvChannel": None,
         "mbrChannel": None,
         "imgChannel": None,
-        "errChannel": None
+        "errChannel": None,
+        "ignoreChannel": []
     }
 
     def __init__(self, bot):
@@ -261,7 +262,7 @@ class Logging(BaseCog):
         if message.author.bot:
             return
 
-        if message.channel.id == 984616712706068510:
+        if message.channel.id in self.cache["ignoreChannel"]:
             return
 
         embed = discord.Embed(title=f"Message deleted in #{message.channel.name}",
@@ -301,7 +302,7 @@ class Logging(BaseCog):
             await self.embed_check(after)
             return
 
-        if after.channel.id == 984616712706068510:
+        if after.channel.id in self.cache["ignoreChannel"]:
             return
 
         embed = discord.Embed(title=f"Message edited in #{before.channel.name}",
@@ -324,6 +325,56 @@ class Logging(BaseCog):
 
         chn = await self.guild.fetch_channel(self.cache["msgChannel"])
         await chn.send(embed=embed)
+
+
+    @commands.Cog.listener()
+    async def on_bulk_message_delete(self, messages):
+        if messages[0].channel.id in self.cache["ignoreChannel"]:
+            return
+
+        firstAuthor = None
+        firstAuthorString = None 
+
+        description = None
+        shown = 1
+        for message in messages:
+            if message.author.bot:
+                continue
+
+            if not firstAuthor:
+                firstAuthor = message.author
+                firstAuthorString = f"[{firstAuthor.name}#{firstAuthor.discriminator}]: "
+                
+                description = firstAuthorString + f"{message.content}"
+                continue
+
+            if message.author != firstAuthor:
+                break
+
+            shown += 1
+            description += f"\n{firstAuthorString}{message.content}"
+
+
+
+        embed = discord.Embed(title=f"{len(messages)} messages deleted in #{messages[0].channel.name}",
+                              description=description, timestamp=datetime.now(), colour=Colour.red())
+
+        embed.set_footer(text=f"Latest {shown} shown")
+
+        await self.fix_embed(embed)
+
+        if self.cache["msgChannel"] == None:
+            if self.cache["logChannel"] == None:
+                return
+
+            chn = await self.guild.fetch_channel(self.cache["logChannel"])
+            await chn.send(embed=embed)
+
+            return
+
+        chn = await self.guild.fetch_channel(self.cache["msgChannel"])
+        await chn.send(embed=embed)
+
 
 #-----------------------------------------server logs----------------------------------------#
 
@@ -829,7 +880,7 @@ class Logging(BaseCog):
 #-----------------------------------Media Log------------------------------#
     @commands.Cog.listener()
     async def on_message(self, message):
-        if message.author.bot or message.channel.id == 984616712706068510:
+        if message.author.bot or message.channel.id in self.cache["ignoreChannel"]:
             return
 
         for attachment in message.attachments:
@@ -845,6 +896,8 @@ class Logging(BaseCog):
                                     timestamp=datetime.now())
                     embed.set_author(name=message.author.name, icon_url=message.author.avatar)
                     embed.set_footer(text=f"U: {message.author.id} | C: {message.channel.id} | M: {message.id}")
+
+                    await self.fix_embed(embed)
                             
                     await channel.send(file=file, embed=embed)
 
@@ -871,6 +924,8 @@ class Logging(BaseCog):
                                     timestamp=datetime.now())
             embed.set_author(name=message.author.name, icon_url=message.author.avatar)
             embed.set_footer(text=f"U: {message.author.id} | C: {message.channel.id} | M: {message.id}")
+
+            await self.fix_embed(embed)
                             
             await channel.send(content=url, embed=embed)
 
@@ -936,6 +991,50 @@ class Logging(BaseCog):
         embed = discord.Embed(
             title="Success", description=f"Cleared {channel_names[log_channel]}logs channel.")
         await ctx.respond(embed=embed)
+
+    @ _lg.command(name="ignore", description = "Add a channel to ignore")
+    @ checks.has_permissions(PermissionLevel.ADMINISTRATOR)
+    async def _lg_ignore_add(self, ctx: ApplicationContext, channel: discord.Option(discord.TextChannel, "The channel you wish to ignore")):
+        if channel.id in self.cache["ignoreChannel"]:
+            embed = discord.Embed(title="Error",
+                                    description=f"The channel {channel.mention} is already added to ignore list",
+                                    colour=Colour.red())
+
+            await ctx.respond(embed=embed)
+
+            return
+        
+        self.cache["ignoreChannel"].append(channel.id)
+        
+        await self.update_db()
+
+        embed = discord.Embed(title="Success",
+                                description=f"Successfully added {channel.mention} to the ignore list.", colour=Colour.green())
+
+        await ctx.respond(embed=embed)
+
+    
+    @ _lg.command(name="observe", description="Remove a channel from the ignore list")
+    @ checks.has_permissions(PermissionLevel.ADMINISTRATOR)
+    async def _lg_observe(self, ctx: ApplicationContext, channel: discord.Option(discord.TextChannel, "The channel you wish to resume logging")):
+        if channel.id not in self.cache["ignoreChannel"]:
+            embed = discord.Embed(title="Error",
+                                    description=f"The channel {channel.mention} is not ignored.",
+                                    colour=Colour.red())
+
+            await ctx.respond(embed=embed)
+
+            return
+        
+        self.cache["ignoreChannel"].remove(channel.id)
+        
+        await self.update_db()
+
+        embed = discord.Embed(title="Success",
+                                description=f"Successfully removed {channel.mention} from the ignore list.", colour=Colour.green())
+
+        await ctx.respond(embed=embed)
+
 
     @ _lg.command(name="list", description="Lists the logs channels.")
     @ checks.has_permissions(PermissionLevel.TRIAL_MOD)
