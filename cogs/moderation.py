@@ -974,7 +974,10 @@ class Moderation(BaseCog):
 
         embed = discord.Embed(
             title="Success", description=f"Successfully purged {len(deleted)} messages.", colour=Colour.green())
-        await ctx.respond(embed=embed)
+        message = await ctx.respond(embed=embed)
+
+        await message.delete_original_message(delay=3)
+
 
     @commands.slash_command(name="bonk", description="Bonk your enemies.", default_member_permissions=Permissions(manage_messages=True))
     @checks.has_permissions(PermissionLevel.STAFF)
