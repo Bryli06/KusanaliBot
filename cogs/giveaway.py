@@ -1,5 +1,6 @@
 import copy
 import random
+import re
 
 import discord
 from discord.ext import commands
@@ -20,19 +21,39 @@ from copy import deepcopy
 class Giveaway(BaseCog):
     _id = "giveaway"
 
-    default_cache = {
-        "tickets": {
+    default_cache = {}
 
-        },
+    async def load_cache(self): #each countdown gets its own document
+        cursor = self.db.find({ })
+        docs = await cursor.to_list(length=10) #how many documents to buffer shouldn't be too high
+        while docs:
+            for document in docs:
+                _id = document.pop("_id")
+                self.cache[_id] = document
 
-        "giveaways": {
+            docs = await cursor.to_list(length=10)
+        
+        self.guild: discord.Guild = await self.bot.fetch_guild(self.bot.config["guild_id"])
+        
+        self.bot.tasks_done = self.bot.tasks_done + 1
 
-        }
-    }
+            
+
+
+    async def update_db(self, _id): #we need a different insert command that allows us to insert into seperate documents
+        if _id not in self.cache:
+            await self.db.delete_one({"_id": _id})
+            return
+
+        await self.db.find_one_and_update(
+            {"_id": _id},
+            {"$set": self.cache[_id]},
+            upsert=True,
+        )
+
 
     _ga = SlashCommandGroup("giveaway", "Contains all giveaway commands.",
                             default_member_permissions=Permissions(manage_messages=True))
-    _tc = _ga.create_subgroup("tickets", "Contains all tickets commands.")
 
     async def after_load(self):
         await self.start_countdowns()
@@ -44,9 +65,9 @@ class Giveaway(BaseCog):
         """
 
         # copied to avoid exceptions from removing done giveaways while iterating
-        cache = deepcopy(self.cache["giveaways"])
-        for message_id in cache:
-            await self.start_countdown(int(message_id))
+        for message_id in list(self.cache.keys()):
+            if not self.cache[int(message_id)]["ended"]:
+                await self.start_countdown(int(message_id))
 
     async def start_countdown(self, message_id):
         """
@@ -56,7 +77,7 @@ class Giveaway(BaseCog):
 
         # get the channel the giveaway is in
         channel: TextChannel = await self.guild.fetch_channel(
-            self.cache["giveaways"][str(message_id)]["channel"])
+            self.cache[message_id]["channel"])
 
         # try fetching the message
         try:
@@ -66,8 +87,8 @@ class Giveaway(BaseCog):
                               f"There seems to be an active giveaway in {channel.mention} that the bot cannot access.",
                               f"Delete the giveaway in {channel.mention} manually `ID: {message_id}`.")
 
-            self.cache["giveaways"].pop(str(message_id))
-            await self.update_db()
+            self.cache.pop(message_id)
+            await self.update_db(message_id)
 
             return
 
@@ -75,8 +96,7 @@ class Giveaway(BaseCog):
         await self.add_enter_button(message)
 
         # get time remaining in computer time
-        unix = self.cache["giveaways"][str(
-            message_id)]["unixTime"] - datetime.now().timestamp()
+        unix = self.cache[message_id]["unixEndTime"] - datetime.now().timestamp()
 
         # add task to close giveaway after countdown has finished
         self.bot.loop.call_later(unix, self.giveaway_end, message)
@@ -88,27 +108,41 @@ class Giveaway(BaseCog):
         """
 
         async def _enter_callback(interaction: Interaction):
-            giveaway = self.cache["giveaways"][str(message.id)]
+            giveaway = self.cache[message.id]
+
+            roles = []
+            for role in interaction.user.roles[1:]:
+                roles.append(role.id)
+
 
             # stops if user has already joined giveaway
-            if interaction.user.id in giveaway["participants"]:
+            if str(interaction.user.id) in giveaway["participants"]:
                 embed = discord.Embed(
                     title="Error", description="You can't enter more than once.", colour=Colour.red())
                 await interaction.response.send_message(embed=embed, ephemeral=True)
 
                 return
+            
 
-            # stops if user does not have any of the roles needed to enter
-            if not any(role.id in giveaway["allowedRoles"] for role in interaction.user.roles):
+            if set(roles) & set(giveaway["bannedRoles"]):
                 embed = discord.Embed(
-                    title="Error", description="You do not possess any of the roles needed to enter.", colour=Colour.red())
+                    title="Error", description="You possess a banned role.", colour=Colour.red())
                 await interaction.response.send_message(embed=embed, ephemeral=True)
 
                 return
 
+            # stops if user does not have any of the roles needed to enter
+            if not (set(roles) & set(giveaway["requiredRoles"])) and giveaway["requiredRoles"]:
+                embed = discord.Embed(
+                    title="Error", description="You do not possess any of the required roles needed to enter.", colour=Colour.red())
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+
+                return
+
+                
             # adds user to the participants list
-            giveaway["participants"].append(interaction.user.id)
-            await self.update_db()
+            giveaway["participants"][str(interaction.user.id)] = roles
+            await self.update_db(message.id)
 
             embed = discord.Embed(
                 title="Success", description="You've entered the giveaway!", colour=Colour.green())
@@ -135,37 +169,34 @@ class Giveaway(BaseCog):
         
         """
 
-        if message == None or str(message.id) not in self.cache["giveaways"]:
+        if not message or message.id not in self.cache:
             return
 
-        cache = self.cache["giveaways"][str(message.id)]
+        giveaway = self.cache[message.id]
 
-        reward = cache["reward"]
-        winners = cache["winners"]
-        allowed_roles = cache["allowedRoles"]
-        participants = cache["participants"]
+        winners = giveaway["winners"]
+        required_roles = giveaway["requiredRoles"]
+        banned_roles = giveaway["bannedRoles"]
+        participants = giveaway["participants"]
+        tickets = giveaway["tickets"]
+        reward = giveaway["reward"]
 
         weights = []
 
-        member_ids = copy.deepcopy(participants)
-        for member_id in member_ids:
-            try:
-                member = await self.guild.fetch_member(member_id)
-            except Exception:
-                participants.remove(member_id)
+        for member_id, roles in list(participants.items()):
+            if (not (set(roles) & set(required_roles)) and required_roles) or set(roles) & set(banned_roles):
+                participants.pop(member_id)
 
                 continue
+            
+            roles_with_tickets = set(map(int, tickets.keys())) & set(roles)
 
-            all_tickets = [0]
-            for role_id in self.bot.config["levelRoles"]:
-                if role_id in allowed_roles:
-                    if member.get_role(role_id):
-                        if str(role_id) in self.cache["tickets"]:
-                            all_tickets.append(self.cache["tickets"][str(role_id)])
-                        else:
-                            all_tickets.append(1)
+            weight = 1
 
-            weights.append(max(all_tickets))
+            for ticket in roles_with_tickets:
+                weight += tickets[str(ticket)]
+
+            weights.append(weight)
 
         # end giveaway with no winners
         if len(participants) == 0:
@@ -174,12 +205,14 @@ class Giveaway(BaseCog):
 
             await message.edit(embed=embed, view=None)
 
-            self.cache["giveaways"].pop(str(message.id))
-            await self.update_db()
+            self.cache.pop(message.id)
+            await self.update_db(message.id)
 
             return
 
         winner_ids = []
+
+        participants = list(participants.keys())
 
         # all participants win if the number of winners is greater than the number of participants
         if winners >= len(participants):
@@ -210,22 +243,50 @@ class Giveaway(BaseCog):
 
         await message.edit(embed=embed, view=None)
 
-        self.cache["giveaways"].pop(str(message.id))
-        await self.update_db()
+        self.cache[message.id]["ended"] = True
+        await self.update_db(message.id)
+        
+    @commands.Cog.listener()
+    async def on_member_update(self, before: discord.Member, after: discord.Member):
+        if before.bot:
+            return
 
-    @commands.message_command(name="End giveaway")
+        if before.roles == after.roles:
+            return
+        
+        for _id, giveaway in self.cache.items():
+            if not giveaway["ended"] and str(before.id) in giveaway["participants"]:
+                giveaway["participants"][str(before.id)] = after.roles[1:]
+
+
+    @_ga.command(name="end", description="Ends a giveaway")
     @checks.has_permissions(PermissionLevel.EVENT_ADMIN)
-    async def message_giveaway_end(self, ctx, message):
+    async def message_giveaway_end(self, ctx: ApplicationContext, message_id: discord.Option(str, "Message id of the giveaway to end early")):
         """
         End a giveaway before its time.
 
         """
-
+        message_id = int(message_id)
         # stop if the message is not a giveaway
-        if str(message.id) not in self.cache["giveaways"]:
+        if message_id not in self.cache:
             embed = discord.Embed(
                 title="Error", description="Message is not an active giveaway.")
             await ctx.respond(embed=embed, ephemeral=True)
+
+            return
+        
+        channel: TextChannel = await self.guild.fetch_channel(
+            self.cache[message_id]["channel"])
+        
+        try:
+            message = await channel.fetch_message(message_id)
+        except Exception as e:
+            self.bot.dispatch("error", e,
+                              f"There seems to be an active giveaway in {channel.mention} that the bot cannot access.",
+                              f"Delete the giveaway in {channel.mention} manually `ID: {message_id}`.")
+
+            self.cache.pop(message_id)
+            await self.update_db(message_id)
 
             return
 
@@ -239,13 +300,16 @@ class Giveaway(BaseCog):
     @checks.has_permissions(PermissionLevel.EVENT_ADMIN)
     async def _ga_create(self, ctx: ApplicationContext, reward: discord.Option(str, "The name of the reward."),
                          winners: discord.Option(int, "The number of winners.", min_value=1),
-                         end: discord.Option(str, "How long is the giveaway.")):
+                         end: discord.Option(str, "How long is the giveaway."), 
+                         required_roles: discord.Option(str, "The required roles", default=""),
+                         banned_roles: discord.Option(str, "The roles that are not allowed to join", default=""),
+                         tickets: discord.Option(str, "How many tickets to give to roles", default="")):
         """
         Creates a new giveaway.
 
         """
 
-        await ctx.defer()
+        await ctx.defer(ephemeral=True)
         
         duration = 0
         try:
@@ -265,106 +329,112 @@ class Giveaway(BaseCog):
             ctx.respond(embed=embed)
 
             return
+        
+        required = await self.parse_roles(required_roles)
+        banned = await self.parse_roles(banned_roles)
+        weights = await self.parse_tickets(tickets)
+        embed = discord.Embed(title=f"{reward} giveaway!", description=f"A giveaway has started and will end on <t:{int(duration.final.timestamp())}:F>!\n{winners} participant{'s' if winners > 1 else ''} will be selected at the end.", colour=Colour.blue())
 
-        # limits the roles shown to 25
-        allowed_roles = None
+        embed.set_author(name=f"Host: {ctx.author.display_name}", icon_url=ctx.author.display_avatar)
 
-        allowed_roles = Select(
-            placeholder="Select allowed roles",
-            max_values=len(self.bot.config["levelRoles"]) if len(
-                self.bot.config["levelRoles"]) <= 25 else 25,
-            options=[discord.SelectOption(label=(await self.guild._fetch_role(role)).name, value=str(
-                role)) for role in self.bot.config["levelRoles"]][:25]
-        )
-
-        async def _roles_callback(interaction: Interaction):
-            unix = int(duration.final.timestamp())
-
-            giveaway = {
-                "channel": ctx.channel_id,
-                "unixTime": unix,
-                "reward": reward,
-                "winners": winners,
-                "allowedRoles": [int(role) for role in allowed_roles.values],
-                "participants": []
-            }
-
-            embed = discord.Embed(
-                title=f"{reward} giveaway!", description=f"A giveaway has started and will end on <t:{unix}:F>!\n{winners} participant{'s' if winners > 1 else ''} will be selected at the end.", colour=Colour.blue())
-
-            embed.set_author(
-                name=f"Host: {ctx.author.display_name}", icon_url=ctx.author.display_avatar)
-
-            value = ""
-            for role in allowed_roles.values:
-                value += f"<@&{role}> "
+        value = ""
+        if required:
+            for role in required:
+                value += f"<@&{role}>\n"
 
             embed.add_field(name="Roles allowed to participate", value=value)
+        
+        if banned:
+            value = ""
+            for role in banned:
+                value += f"<@&{role}>\n"
 
-            inter = await interaction.response.send_message(embed=embed)
-            message = await inter.original_message()
+            embed.add_field(name="Roles banned from participating", value=value)
 
-            self.cache["giveaways"].update({str(message.id): giveaway})
-            await self.update_db()
+        if weights:
+            value = ""
+            for k, v in weights.items():
+                value += f"<@&{k}>: {v} ticket{'' if v==1 else 's'}\n"
 
-            await self.add_enter_button(message)
+            embed.add_field(name="Additional Role Ticktes", value=value)
+                
+        class confirmButton(discord.ui.Button):
+            def __init__(self, giveaway):
+                self.giveaway = giveaway
 
-            await self.start_countdown(message.id)
+                super().__init__(
+                    label="✅", 
+                    style=discord.ButtonStyle.green
+                )
 
-        allowed_roles.callback = _roles_callback
+            async def callback(self, interaction: Interaction):
+                for child in self.view.children:
+                    child.disabled = True
+            
+                giveaway = {
+                    "channel": ctx.channel_id,
+                    "unixEndTime": int(duration.final.timestamp()),
+                    "reward": reward,
+                    "winners": winners,
+                    "tickets": weights,
+                    "requiredRoles": required,
+                    "bannedRoles": banned,
+                    "participants": {},
+                    "ended": False
+                }
+            
+                message = await ctx.channel.send(embed=embed)
 
-        roles_view = View(allowed_roles)
+                self.giveaway.cache[message.id] = giveaway
+                await self.giveaway.update_db(message.id)
 
-        await ctx.respond(view=roles_view, ephemeral=True)
+                await self.giveaway.start_countdown(message.id)
+            
+                await interaction.response.edit_message(view=self.view)
 
-    @_tc.command(name="list", description="Shows tickets for all roles.")
-    @checks.has_permissions(PermissionLevel.EVENT_ADMIN)
-    async def _tc_list(self, ctx: ApplicationContext):
-        """
-        Shows the tickets for each role.
 
-        """
+        class denyButton(discord.ui.Button):
+            def __init__(self):
 
-        if len(self.cache["tickets"]) == 0:
-            embed = Embed(
-                title="Error", description="No tickets were set for any role.", colour=Colour.red())
-            await ctx.respond(embed=embed)
+                super().__init__(
+                    label="❌", 
+                    style=discord.ButtonStyle.red
+                )
+            async def callback(self, interaction: Interaction):
+                for child in self.view.children:
+                    child.disabled = True
 
-            return
+                await interaction.response.edit_message(view=self.view)
 
-        embed = Embed(title="Role tickets", colour=Colour.blue())
 
-        description = ""
-        for role_id in self.cache["tickets"]:
-            description += f"{(await self.guild._fetch_role(int(role_id))).mention}: {self.cache['tickets'][role_id]}\n"
+        view = View(timeout=60)
 
-        embed.description = description
+        view.add_item(confirmButton(self))
+        view.add_item(denyButton())
 
-        await ctx.respond(embed=embed)
+        await ctx.respond(embed=embed, view=view, ephemeral=True)
 
-    @_tc.command(name="set", description="Sets the tickets amount for a role.")
-    @checks.has_permissions(PermissionLevel.EVENT_ADMIN)
-    async def _tc_set(self, ctx: ApplicationContext, role: discord.Option(discord.Role, "The roles you want to change the tickets amount for."),
-                      tickets: discord.Option(int, "The tickets amount.", min_value=0)):
-        """
-        Sets the tickets amount for a role in the database.
 
-        """
 
-        if role.id not in self.bot.config["levelRoles"]:
-            embed = Embed(
-                title="Error", description="Role not found in the database.", colour=Colour.red())
-            await ctx.respond(embed=embed)
 
-            return
+    async def parse_roles(self, ids):
+        regex = r"\d{18}"
 
-        self.cache["tickets"].update({str(role.id): tickets})
+        return list(map(int, re.findall(regex, ids)))
 
-        await self.update_db()
+    async def parse_tickets(self, tickets):
+        regex = r"\d+"
 
-        embed = Embed(
-            title="Success", description=f"New tickets amount set for {role.mention}.", colour=Colour.green())
-        await ctx.respond(embed=embed)
+        parsed = re.findall(regex, tickets)
+        
+        weights = {} 
+
+        for i in range(len(parsed)//2):
+            weights[parsed[2*i]] = int(parsed[2*i+1])
+
+        return weights
+            
+    
 
 
 def setup(bot):
