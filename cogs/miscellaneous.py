@@ -42,7 +42,7 @@ class Miscellaneous(BaseCog):
                     "*Depends on the number of hairs you have over 2.21 mm long*\n"
                     "*Depends on the hydration levels in the pee of a guy named Darmo Kasim in Indonesia*\n"
                     "*Depends on if P = NP*\n"
-                    "*Depends on if Drak can finally get a job*\n\n"
+                    "*Depends on if Drak can finally 36\\**\n\n"
                     "**It Depends™**")
         embed = discord.Embed(title="It Depends.", description=description, colour=Colour.red())
 
