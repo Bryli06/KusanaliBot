@@ -44,7 +44,7 @@ class Miscellaneous(BaseCog):
                     "*Depends on if P = NP*\n"
                     "*Depends on if Drak can finally get a job*\n\n"
                     "**It Depends™**")
-        embed = discord.Embed(title="It Depends", description=description, colour=Colour.red())
+        embed = discord.Embed(title="It Depends.", description=description, colour=Colour.red())
 
         await ctx.respond(embed=embed)
 
