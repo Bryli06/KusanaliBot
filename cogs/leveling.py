@@ -463,7 +463,7 @@ class Leveling(BaseCog):
 
         if exp + self.exp_given >= next_level:
 
-            embed = discord.Embed(title="Level Up", description=f"Congradulations! You have reached level {level}, {user.mention}", colour=Colour.green(), timestamp=datetime.now())
+            embed = discord.Embed(title="Level Up", description=f"Congratulations! You have reached level {level}, {user.mention}", colour=Colour.green(), timestamp=datetime.now())
             embed.set_thumbnail(url=user.display_avatar.url)
 
             await channel.send(embed=embed)
