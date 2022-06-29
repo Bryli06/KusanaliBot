@@ -1,5 +1,6 @@
 from datetime import datetime
 import discord
+import re
 from discord.ext import commands
 
 from discord import ApplicationContext, Colour, Permissions
@@ -166,7 +167,8 @@ class Modmail(BaseCog):
             if role in member.roles:
                 await thread.add_user(member)
 
-        for owner in self.bot.config["owners"]:
+        parsed_owners = re.findall(r"\d{18}", self.bot.config["owners"])
+        for owner in parsed_owners:
             member = await self.guild.fetch_member(int(owner))
             await thread.add_user(member)
 

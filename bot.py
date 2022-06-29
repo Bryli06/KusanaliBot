@@ -193,6 +193,9 @@ class KusanaliBot(commands.Bot):
                                     type=discord.ActivityType.watching, name='over the server'))
 
 
+
+
+
 def main():
     bot = KusanaliBot()
     bot.run()
