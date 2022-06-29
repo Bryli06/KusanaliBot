@@ -256,7 +256,10 @@ class Giveaway(BaseCog):
         
         for _id, giveaway in self.cache.items():
             if not giveaway["ended"] and str(before.id) in giveaway["participants"]:
-                giveaway["participants"][str(before.id)] = after.roles[1:]
+                role_id = []
+                for role in after.roles[1:]:
+                    role_id.append(role.id)
+                giveaway["participants"][str(before.id)] = role_id
 
 
     @_ga.command(name="end", description="Ends a giveaway")
