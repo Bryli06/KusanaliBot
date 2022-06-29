@@ -30,7 +30,8 @@ class Countdown(BaseCog):
         docs = await cursor.to_list(length=10) #how many documents to buffer shouldn't be too high
         while docs:
             for document in docs:
-                self.cache[str(document.get("_id"))] = {"name": document.get("name"), "date": document.get("date")}
+                _id = document.pop("_id")
+                self.cache[_id] = document
 
             docs = await cursor.to_list(length=10)
         
@@ -53,6 +54,9 @@ class Countdown(BaseCog):
         )
 
     async def after_load(self):
+        await self.start_countdowns()
+
+    async def start_countdowns(self):
         for k, v in list(self.cache.items()):
             await self.start_countdown(k)
 
