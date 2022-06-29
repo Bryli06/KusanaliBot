@@ -58,7 +58,7 @@ class Countdown(BaseCog):
 
     async def start_countdowns(self):
         for k, v in list(self.cache.items()):
-            await self.start_countdown(k)
+            self.bot.loop.create_task(self.start_countdown(k))
 
     async def start_countdown(self, channel_id):
         channel = await self.guild.fetch_channel(int(channel_id))
