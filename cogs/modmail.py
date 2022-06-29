@@ -141,7 +141,7 @@ class Modmail(BaseCog):
 
         member = await self.guild.fetch_member(ctx.author.id)
 
-        thread: discord.Thread = await self.modmail_channel.create_thread(name=title)
+        thread: discord.Thread = await self.modmail_channel.create_thread(name=f"{ctx.author.id} — {title}")
 
         embed = discord.Embed(
             description=f"{ctx.author.mention}\nReason for mail: {reason}", timestamp=datetime.now(), colour=Colour.green())
@@ -165,6 +165,10 @@ class Modmail(BaseCog):
         async for member in self.guild.fetch_members(limit=None):
             if role in member.roles:
                 await thread.add_user(member)
+
+        for owner in self.bot.config["owners"]:
+            member = await self.guild.fetch_member(int(owner))
+            await thread.add_user(member)
 
         self.cache["userThreads"].update({str(ctx.author.id): thread.id})
         await self.update_db()
