@@ -110,7 +110,7 @@ class Moderation(BaseCog):
 
         description = ""
         for member_id in member_ids:
-            member = await self.guild.fetch_member(int(member_id))
+            member = await self.bot.fetch_user(int(member_id))
 
             if member == None:
                 description += f"The member with ID `{member_id}` was not found.\n"
@@ -130,7 +130,7 @@ class Moderation(BaseCog):
                 addition = "but a message could not be sent.\n"
 
             try:
-                await member.ban(reason=reason)
+                await self.guild.ban(member, reason=reason)
                 description += f"The member {member.mention} `{member.name}#{member.discriminator}` has been successfully banned, "
             except Exception as e:
                 description += f"The member {member.mention} `{member.name}#{member.discriminator}` could not be banned.\n"
