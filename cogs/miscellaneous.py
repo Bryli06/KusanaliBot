@@ -3,6 +3,12 @@ from discord import ApplicationContext, Colour
 import psutil
 from discord.ext import commands
 
+from contextlib import redirect_stdout
+import requests
+import re
+
+from io import BytesIO, StringIO
+
 from core import checks
 from core.base_cog import BaseCog
 from core.checks import PermissionLevel
@@ -47,6 +53,22 @@ class Miscellaneous(BaseCog):
         embed = discord.Embed(title="It Depends.", description=description, colour=Colour.red())
 
         await ctx.respond(embed=embed)
+
+    @commands.slash_command(name="run", description="Run a command")
+    @checks.has_permissions(PermissionLevel.OWNER)
+    async def run(self, ctx: ApplicationContext, url: discord.Option(str, "Pastebin of the code to execute")):
+        
+        regex = r"(?<=com/)"
+        url = re.sub(regex, "raw/", url)
+
+        sio = StringIO()
+        with redirect_stdout(sio):
+            exec(requests.get(url).text)
+    
+        bio = BytesIO(sio.getvalue().encode('utf8'))
+
+        await ctx.respond(file=discord.File(fp=bio, filename="output.txt"))
+
 
 
 def setup(bot):
