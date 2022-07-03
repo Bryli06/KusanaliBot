@@ -116,9 +116,16 @@ class Moderation(BaseCog):
                 description += f"The member with ID `{member_id}` was not found.\n"
                 continue
 
-            if str(ctx.author.id) not in self.bot.config["owners"] and ctx.author.roles[-1] < member.roles[-1]:
+            try:
+                member_obj = await self.guild.fetch_member(int(member_id))
+                print(member_obj.roles)
+            except:
+                pass
+            
+            if str(ctx.author.id) not in self.bot.config["owners"] and member_obj and ctx.author.roles[-1] < member_obj.roles[-1]:
                 description += f"You do not have the permission to ban the member {member.mention}.\n"
                 continue
+
             
             addition = ""
 
