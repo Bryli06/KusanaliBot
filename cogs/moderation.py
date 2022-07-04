@@ -74,6 +74,15 @@ class Moderation(BaseCog):
 
         return re.findall(regex, ids)
 
+    async def format_string(self, string) -> str:
+        if len(string) < 4096:
+            return string
+
+        return string[-4096:][string.index['\n'] + 2:]
+
+
+
+
 #----------------------------------------ban and unbans----------------------------------------#
 
     @commands.slash_command(name="ban", description="Bans a member", default_member_permissions=Permissions(ban_members=True))
@@ -86,6 +95,7 @@ class Moderation(BaseCog):
         Bans a member via /ban [members] [duration: Optional] [reason: Optional]
 
         """
+        await ctx.defer()
 
         after = None
         if duration != "inf":
@@ -118,7 +128,6 @@ class Moderation(BaseCog):
 
             try:
                 member_obj = await self.guild.fetch_member(int(member_id))
-                print(member_obj.roles)
             except:
                 pass
             
@@ -160,9 +169,15 @@ class Moderation(BaseCog):
 
         if after:
             description += f"\nUnbanning at <t:{round(after.final.timestamp())}:F>.\n"
+        
+        description = await self.format_string(description)
 
         embed = discord.Embed(
             title="Report", description=description, colour=Colour.blue())
+        
+        new_line = "\n" #limitation of fstring
+        embed.set_footer(text=f"Latest {description.count(new_line)} lines shown")
+
         await ctx.respond(embed=embed)
 
     @commands.slash_command(name="unban", description="Unbans a member", default_member_permissions=Permissions(ban_members=True))
@@ -174,6 +189,8 @@ class Moderation(BaseCog):
         Unbans a member via /unban [members] 
 
         """
+
+        await ctx.defer()
 
         member_ids = await self.get_member_ids(members)
 
@@ -212,8 +229,13 @@ class Moderation(BaseCog):
 
         await self.update_db()
 
+        description = await self.format_string(description)
+
         embed = discord.Embed(
             title="Report", description=description, colour=Colour.blue())
+        
+        new_line = "\n" #limitation of fstring
+        embed.set_footer(text=f"Latest {description.count(new_line)} lines shown")
         await ctx.respond(embed=embed)
 
     async def _unban(self, member, time):
@@ -254,6 +276,7 @@ class Moderation(BaseCog):
         Lists all the bans and unbans for a member
 
         """
+        await ctx.defer()
 
         member_id = str(member.id)
 
@@ -281,8 +304,13 @@ class Moderation(BaseCog):
         if not description:
             description = "This user has not been banned."
 
+        description = await self.format_string(description)
+
         embed = discord.Embed(
             title=f"{member.name} ({member.id})", description=description, colour=Colour.blue())
+        
+        new_line = "\n" #limitation of fstring
+        embed.set_footer(text=f"Latest {description.count(new_line)} lines shown")
         await ctx.respond(embed=embed)
 
 
@@ -298,6 +326,7 @@ class Moderation(BaseCog):
         Kicks a member via /kick [members] [reason: Optional]
 
         """
+        await ctx.defer()
 
         member_ids = await self.get_member_ids(members)
 
@@ -346,8 +375,13 @@ class Moderation(BaseCog):
 
         await self.update_db()
 
+        description = await self.format_string(description)
+
         embed = discord.Embed(
             title="Report", description=description, colour=Colour.blue())
+        
+        new_line = "\n" #limitation of fstring
+        embed.set_footer(text=f"Latest {description.count(new_line)} lines shown")
         await ctx.respond(embed=embed)
 
     @commands.slash_command(name="kicks", description="Lists all kicks for a member.", default_member_permissions=Permissions(manage_messages=True))
@@ -357,6 +391,7 @@ class Moderation(BaseCog):
         Lists all the kicks for a member.
 
         """
+        await ctx.defer()
 
         member_id = str(member.id)
 
@@ -377,8 +412,13 @@ class Moderation(BaseCog):
         if not description:
             description = "This user not been kicked."
 
+        description = await self.format_string(description)
+
         embed = discord.Embed(
             title=f"{member.name} ({member.id})", description=description, colour=Colour.blue())
+        
+        new_line = "\n" #limitation of fstring
+        embed.set_footer(text=f"Latest {description.count(new_line)} lines shown")
         await ctx.respond(embed=embed)
 
 #----------------------------------------Mute and Unmute----------------------------------------#
@@ -415,6 +455,7 @@ class Moderation(BaseCog):
         Mutes a member via /mute [members] [duration: Optional] [reason: Optional]
 
         """
+        await ctx.defer()
 
         if not self.cache["muteRole"]:
             embed = discord.Embed(
@@ -497,8 +538,14 @@ class Moderation(BaseCog):
         if after:
             description += f"Unmuting at <t:{round(after.final.timestamp())}:F>.\n"
 
+        description = await self.format_string(description)
+
         embed = discord.Embed(
             title="Report", description=description, colour=Colour.blue())
+        
+        new_line = "\n" #limitation of fstring
+        embed.set_footer(text=f"Latest {description.count(new_line)} lines shown")
+        
         await ctx.respond(embed=embed)
 
     @commands.slash_command(name="unmute", description="Unmutes a member.", default_member_permissions=Permissions(manage_messages=True))
@@ -510,6 +557,7 @@ class Moderation(BaseCog):
         Unmutes a member via /unmute [members] [reason: optional]
 
         """
+        await ctx.defer()
 
         member_ids = await self.get_member_ids(members)
 
@@ -556,8 +604,14 @@ class Moderation(BaseCog):
 
         await self.update_db()
 
+        description = await self.format_string(description)
+
         embed = discord.Embed(
             title="Report", description=description, colour=Colour.blue())
+        
+        new_line = "\n" #limitation of fstring
+        embed.set_footer(text=f"Latest {description.count(new_line)} lines shown")
+        
         await ctx.respond(embed=embed)
 
     async def _unmute(self, member, time):
@@ -600,6 +654,7 @@ class Moderation(BaseCog):
         Lists all the mutes and unmutes for a member
 
         """
+        await ctx.defer()
 
         member_id = str(member.id)
 
@@ -627,8 +682,14 @@ class Moderation(BaseCog):
         if not description:
             description = "This user has not been muted."
 
+        description = await self.format_string(description)
+
         embed = discord.Embed(
             title=f"{member.name} ({member.id})", description=description, colour=Colour.blue())
+        
+        new_line = "\n" #limitation of fstring
+        embed.set_footer(text=f"Latest {description.count(new_line)} lines shown")
+        
         await ctx.respond(embed=embed)
 
 #----------------------------------------Warn----------------------------------------#
@@ -641,6 +702,7 @@ class Moderation(BaseCog):
         Warns a member via /warn [members] [reason]
 
         """
+        await ctx.defer()
 
         member_ids = await self.get_member_ids(members)
 
@@ -676,8 +738,14 @@ class Moderation(BaseCog):
 
         await self.update_db()
 
+        description = await self.format_string(description)
+
         embed = discord.Embed(
             title="Report", description=description, colour=Colour.blue())
+        
+        new_line = "\n" #limitation of fstring
+        embed.set_footer(text=f"Latest {description.count(new_line)} lines shown")
+        
         await ctx.respond(embed=embed)
 
     @commands.slash_command(name="pardon", description="Pardons a warn", default_member_permissions=Permissions(manage_messages=True))
@@ -689,6 +757,7 @@ class Moderation(BaseCog):
         Pardons warns for some members via /pardon [members]
 
         """
+        await ctx.defer()
 
         member_ids = await self.get_member_ids(members)
 
@@ -784,8 +853,14 @@ class Moderation(BaseCog):
         if not description:
             description = "This user has no warns."
 
+        description = await self.format_string(description)
+
         embed = discord.Embed(
             title=f"{member.name} ({member.id})", description=description, colour=Colour.blue())
+        
+        new_line = "\n" #limitation of fstring
+        embed.set_footer(text=f"Latest {description.count(new_line)} lines shown")
+        
         await ctx.respond(embed=embed)
 
 #----------------------------------------Note----------------------------------------#
@@ -798,6 +873,7 @@ class Moderation(BaseCog):
         Writes a note about a member member via /note [members] [note]
 
         """
+        await ctx.defer()
 
         member_ids = await self.get_member_ids(members)
 
@@ -823,8 +899,14 @@ class Moderation(BaseCog):
 
         await self.update_db()
 
+        description = await self.format_string(description)
+
         embed = discord.Embed(
             title="Report", description=description, colour=Colour.blue())
+        
+        new_line = "\n" #limitation of fstring
+        embed.set_footer(text=f"Latest {description.count(new_line)} lines shown")
+        
         await ctx.respond(embed=embed)
 
     @commands.slash_command(name="omit", description="Deletes a note", default_member_permissions=Permissions(manage_messages=True))
@@ -835,6 +917,7 @@ class Moderation(BaseCog):
         Omits notes for some members via /omit [members]
 
         """
+        await ctx.defer()
 
         member_ids = await self.get_member_ids(members)
 
@@ -910,8 +993,14 @@ class Moderation(BaseCog):
         if not description:
             description = "This user has no notes."
 
+        description = await self.format_string(description)
+
         embed = discord.Embed(
             title=f"{member.name} ({member.id})", description=description, colour=Colour.blue())
+        
+        new_line = "\n" #limitation of fstring
+        embed.set_footer(text=f"Latest {description.count(new_line)} lines shown")
+        
         await ctx.respond(embed=embed)
 
 #--------------------------------------------------------------------------------#

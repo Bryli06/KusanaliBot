@@ -49,6 +49,8 @@ class Modmail(BaseCog):
 
         await thread.send(embed=embed)
 
+        await message.add_reaction('✅')
+
     # check if the user is ending the session
     ending = False
 
@@ -175,7 +177,7 @@ class Modmail(BaseCog):
         self.cache["userThreads"].update({str(ctx.author.id): thread.id})
         await self.update_db()
 
-        await ctx.respond("Session started!")
+        await ctx.respond("Your message has been sent! Please wait patiently while the staff respond!")
 
     @commands.slash_command(name="end", description="Ends a modmail session.")
     @commands.dm_only()
