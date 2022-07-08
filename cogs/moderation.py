@@ -125,6 +125,8 @@ class Moderation(BaseCog):
             if member == None:
                 description += f"The member with ID `{member_id}` was not found.\n"
                 continue
+            
+            member_obj = None
 
             try:
                 member_obj = await self.guild.fetch_member(int(member_id))

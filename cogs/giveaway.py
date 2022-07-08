@@ -37,8 +37,6 @@ class Giveaway(BaseCog):
         
         self.bot.tasks_done = self.bot.tasks_done + 1
 
-            
-
 
     async def update_db(self, _id): #we need a different insert command that allows us to insert into seperate documents
         if _id not in self.cache:
@@ -50,7 +48,6 @@ class Giveaway(BaseCog):
             {"$set": self.cache[_id]},
             upsert=True,
         )
-
 
     _ga = SlashCommandGroup("giveaway", "Contains all giveaway commands.",
                             default_member_permissions=Permissions(manage_messages=True))
