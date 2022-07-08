@@ -325,8 +325,7 @@ class Modmail(BaseCog):
             return
 
         for _message in reversed(self.cache[thread_hash]["messages"]):
-            if Source.CHANNEL.value == _message["source"]:
-                thread = await self.guild.fetch_channel(self.cache[thread_hash]["channel"])
+            if Source.CHANNEL.value == _message["source"] and "deleted_message" not in _message:
                 dm_channel = await self.bot.fetch_user(self.cache[thread_hash]["user"])
 
                 dm_message = await dm_channel.fetch_message(_message["dm_message"])
@@ -345,6 +344,12 @@ class Modmail(BaseCog):
                 await ctx.respond(embed=embed)
 
                 return
+
+        embed = discord.Embed(title="Error",
+                                description="There are no messages to delete", colour=Colour.red())
+
+        await ctx.respond(embed=embed)
+
 
 
     @commands.slash_command(name="start", description="Starts a modmail session.")
