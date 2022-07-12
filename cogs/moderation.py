@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from core.context import ModContext
 import copy
 import re
+import requests
 from core.base_cog import BaseCog
 
 from core.time import TimeConverter, InvalidTime
@@ -69,6 +70,12 @@ class Moderation(BaseCog):
         Gets the IDs of members.
 
         """
+        if r"pastebin.com" in ids:
+            regex = r"(?<=com/)"
+            
+            url = re.sub(regex, "raw/", ids)
+
+            ids = requests.get(url).text
 
         regex = r"\d{18}"
 
@@ -78,7 +85,7 @@ class Moderation(BaseCog):
         if len(string) < 4096:
             return string
 
-        return string[-4096:][string.index['\n'] + 2:]
+        return string[-4096:][string.index('\n') + 2:]
 
 
 
