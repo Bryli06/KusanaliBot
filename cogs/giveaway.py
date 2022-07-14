@@ -177,13 +177,12 @@ class Giveaway(BaseCog):
         participants = giveaway["participants"]
         tickets = giveaway["tickets"]
         reward = giveaway["reward"]
-
-        weights = []
+        
+        participant_ids = []
+        participant_weights = []
 
         for member_id, roles in list(participants.items()):
             if (not (set(roles) & set(required_roles)) and required_roles) or set(roles) & set(banned_roles):
-                participants.pop(member_id)
-
                 continue
             
             roles_with_tickets = set(map(int, tickets.keys())) & set(roles)
@@ -193,10 +192,11 @@ class Giveaway(BaseCog):
             for ticket in roles_with_tickets:
                 weight += tickets[str(ticket)]
 
-            weights.append(weight)
-
+            participant_weights.append(weight)
+            participant_ids.append(member_id)
+        
         # end giveaway with no winners
-        if len(participants) == 0:
+        if len(participant_ids) == 0:
             embed = discord.Embed(
                 title="Giveaway has ended!", description="The giveaway has ended with no winners.", colour=Colour.blue())
 
@@ -208,22 +208,31 @@ class Giveaway(BaseCog):
             return
 
         winner_ids = []
-
-        participants = list(participants.keys())
+        winner_weights = []
 
         # all participants win if the number of winners is greater than the number of participants
-        if winners >= len(participants):
-            winner_ids = participants
+        if winners >= len(participant_ids):
+            winner_ids = participant_ids
+            winner_weights = participant_weights
+            
+            participant_ids = []
+            participant_weights = []
         else:
             for i in range(winners):
-                winner_id = random.choices(participants, weights)[0]
+                winner_id = random.choices(participant_ids, participant_weights)[0]
 
-                winner_ids.append(winner_id)
+                index = participant_ids.index(winner_id)
 
-                index = participants.index(winner_id)
+                winner_ids.append(participant_ids.pop(index))
+                winner_weights.append(participant_weights.pop(index))
 
-                participants.pop(index)
-                weights.pop(index)
+        
+        giveaway["particpant_weights"] = participant_weights
+        giveaway["participant_ids"] = participant_ids
+
+        giveaway["winner_weights"] = winner_weights
+        giveaway["winner_ids"] = winner_ids
+
 
         description = "Congratulations to:\n"
         for winner_id in winner_ids:
