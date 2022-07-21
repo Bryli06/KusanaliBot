@@ -20,8 +20,8 @@ class Source(Enum):
 class Modmail(BaseCog):
     _id = "modmail"
 
-    _modmail_channel_id = 975554256138534942
-    _modmail_role_id = 975558400991707136 
+    _modmail_channel_id = 981256471146803271
+    _modmail_role_id = 974372784056700968
 
     default_cache = {
         "modmail_channel_id": None,
@@ -118,6 +118,24 @@ class Modmail(BaseCog):
             name=f"{message.author.name}#{message.author.discriminator}", icon_url=message.author.avatar)
         
         channel_message = await thread.send(embed=embed)
+        
+        attachment_embeds = []
+        for attachment in message.attachments:
+            if attachment.filename.endswith('.png') or attachment.filename.endswith('.jpeg') or attachment.filename.endswith('.gif') or attachment.filename.endswith('.jpg'):
+                attachment_embed = discord.Embed(timestamp=datetime.now(), colour=Colour.green())
+                attachment_embed.set_author(
+                    name=f"{message.author.name}#{message.author.discriminator}", icon_url=message.author.avatar)
+
+                attachment_embed.set_image(url=attachment.url)
+
+                attachment_embeds.append(attachment_embed)
+
+                if len(attachment_embeds) == 10:
+                    await thread.send(embeds=attachment_embeds)
+                    attachment_embeds = []
+        
+        if attachment_embeds:
+            await thread.send(embeds=attachment_embeds)
 
         self.cache[thread_hash]["messages"].append({"message": message.content, 
                                                     "author": message.author.id, 
@@ -148,7 +166,7 @@ class Modmail(BaseCog):
 
                 embed = _message.embeds[0]
 
-                embed.description = f"**Original** \n {embed.description} \n\n **Edited**\n {after.content}"
+                embed.description = f"{'' if 'edited_message' in message else '**Original**'} \n {embed.description} \n\n **Edited**\n {after.content}"
                 embed.title = "Message Edited"
                 embed.colour = Colour.blue()
 
@@ -193,7 +211,7 @@ class Modmail(BaseCog):
     # check if the user is ending the session
     @commands.Cog.listener()
     async def on_thread_delete(self, thread):
-        thread_hash = self.hash(thread.name)
+        thread_hash = self.hash(thread)
         if self.cache[thread_hash]["ended"]:
             return
 
@@ -213,7 +231,7 @@ class Modmail(BaseCog):
 
     @commands.Cog.listener()
     async def on_thread_remove(self, thread):
-        thread_hash = self.hash(thread.name)
+        thread_hash = self.hash(thread)
         if self.cache[thread_hash]["ended"]:
             return
 
@@ -233,12 +251,12 @@ class Modmail(BaseCog):
 
     @commands.Cog.listener()
     async def on_thread_update(self, before, after):
-        before_hash = self.hash(before.name)
+        before_hash = self.hash(before)
         if self.cache[before_hash]["ended"]:
             return
 
         if after.name != before.name:
-            after_hash = self.hash(after.name)
+            after_hash = self.hash(after)
             self.cache[after_hash] = self.cache.pop(before_hash)
             
             await self.update_db(after_hash)
@@ -263,14 +281,14 @@ class Modmail(BaseCog):
 
 
     @commands.slash_command(name="reply", description="Replies to a user in a modmail thread.", default_member_permissions=Permissions(manage_threads=True))
-    @checks.has_permissions(PermissionLevel.MOD)
+    @checks.has_permissions(PermissionLevel.TRIAL_MOD)
     @checks.only_modmail_thread(_modmail_channel_id)
     async def reply(self, ctx: ApplicationContext, message: discord.Option(str, "The message you wish to reply with.")):
         """
         Replies to a modmail thread.
 
         """
-        thread_hash = self.hash(ctx.channel.name)
+        thread_hash = self.hash(ctx.channel)
         
         if self.cache[thread_hash]["ended"]:
             embed = discord.Embed(title="Error",
@@ -307,14 +325,14 @@ class Modmail(BaseCog):
         await self.update_db(thread_hash)
 
     @commands.slash_command(name="delete", description="Delete the most recently sent message in a modmail thread.", default_member_permissions=Permissions(manage_threads=True))
-    @checks.has_permissions(PermissionLevel.MOD)
+    @checks.has_permissions(PermissionLevel.TRIAL_MOD)
     @checks.only_modmail_thread(_modmail_channel_id)
     async def delete(self, ctx: ApplicationContext):
         """
         Replies to a modmail thread.
 
         """
-        thread_hash = self.hash(ctx.channel.name)
+        thread_hash = self.hash(ctx.channel)
         
         if self.cache[thread_hash]["ended"]:
             embed = discord.Embed(title="Error",
@@ -370,6 +388,8 @@ class Modmail(BaseCog):
 
         thread: discord.Thread = await self.modmail_channel.create_thread(name=f"{ctx.author.id} — {title}")
 
+        role = await self.guild._fetch_role(self._modmail_role_id)
+
         embed = discord.Embed(
             description=f"{ctx.author.mention}\nReason for mail: {reason}", timestamp=datetime.now(), colour=Colour.green())
 
@@ -383,22 +403,16 @@ class Modmail(BaseCog):
 
         embed.add_field(name="**Roles**", value=value)
 
-        channel_message = await thread.send(embed=embed)
+        channel_message = await thread.send(content=role.mention, embed=embed)
 
         await ctx.defer()
-
-        role = await self.guild._fetch_role(self._modmail_role_id)
-
-        async for member in self.guild.fetch_members(limit=None):
-            if role in member.roles:
-                await thread.add_user(member)
 
         parsed_owners = re.findall(r"\d{18}", self.bot.config["owners"])
         for owner in parsed_owners:
             member = await self.guild.fetch_member(int(owner))
             await thread.add_user(member)
-        
-        thread_hash = self.hash(thread.name)
+
+        thread_hash = self.hash(thread)
 
         self.cache[self._id]["active"][str(ctx.author.id)] = thread_hash
         await self.update_db(self._id)
@@ -434,7 +448,7 @@ class Modmail(BaseCog):
 
             return
 
-        thread_hash = self.hash(ctx.channel.name)
+        thread_hash = self.hash(ctx.channel)
 
         author_id = self.cache[thread_hash]["user"]
 
@@ -459,10 +473,14 @@ class Modmail(BaseCog):
         self.cache[thread_hash]["ended"] = True
 
         await self.update_db(thread_hash)
-
+        
         member = await self.bot.fetch_user(author_id)
 
-        await member.send("Session ended!")
+        try:
+            await member.send("Session ended!")
+        
+        except:
+            await ctx.channel.send("Could not message user.")
         
         self.bot.loop.call_later(5, self._end, thread)
 
@@ -503,7 +521,8 @@ class Modmail(BaseCog):
         await ctx.respond("Session ended!")
 
 
-    def hash(self, s: str):
+    def hash(self, thread):
+        s = thread.name + str(thread.id)
         return b64encode(bytes.fromhex(hashlib.sha224(s.encode()).hexdigest())).decode()[:16] #what the actual fuck
 
 
