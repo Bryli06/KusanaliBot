@@ -418,8 +418,6 @@ class Modmail(BaseCog):
 
         thread: discord.Thread = await self.modmail_channel.create_thread(name=f"{ctx.author.id} — {title}")
 
-        role = await self.guild._fetch_role(self.cache[self._id]["modmail_role_id"])
-
         embed = discord.Embed(
             description=f"{ctx.author.mention}\nReason for mail: {reason}", timestamp=datetime.now(), colour=Colour.green())
 
@@ -432,6 +430,8 @@ class Modmail(BaseCog):
             value += f"{role.mention} "
 
         embed.add_field(name="**Roles**", value=value)
+
+        role = await self.guild._fetch_role(self.cache[self._id]["modmail_role_id"])
 
         channel_message = await thread.send(content=role.mention, embed=embed)
 
