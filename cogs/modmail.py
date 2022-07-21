@@ -20,8 +20,6 @@ class Source(Enum):
 class Modmail(BaseCog):
     _id = "modmail"
 
-    _modmail_channel_id = 981256471146803271
-    _modmail_role_id = 974372784056700968
 
     default_cache = {
         "modmail_channel_id": None,
@@ -47,6 +45,14 @@ class Modmail(BaseCog):
         messages -> array of the messages. [message: str, author_id: int, dm_message_id, channel_message_id] 
     }
     '''
+
+    _mm = discord.SlashCommandGroup("modmail", "Manages modmail.", 
+            default_member_permissions=discord.Permissions(administrator=True))
+
+    _chn = _mm.create_subgroup("channel", "Manages modmail channel.")
+
+    _role = _mm.create_subgroup("role", "Manages modmail role.")
+
     async def load_cache(self): #each countdown gets its own document
         cursor = self.db.find({ })
         docs = await cursor.to_list(length=10) #how many documents to buffer shouldn't be too high
@@ -92,7 +98,11 @@ class Modmail(BaseCog):
         )
 
     async def after_load(self):
-        self.modmail_channel = await self.guild.fetch_channel(self._modmail_channel_id)
+        await self.check_modmail()
+
+    async def check_modmail(self):
+        if self.cache[self._id]["modmail_role_id"] and self.cache[self._id]["modmail_channel_id"]:
+            self.modmail_channel = await self.guild.fetch_channel(self.cache[self._id]["modmail_channel_id"])
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -282,13 +292,21 @@ class Modmail(BaseCog):
 
     @commands.slash_command(name="reply", description="Replies to a user in a modmail thread.", default_member_permissions=Permissions(manage_threads=True))
     @checks.has_permissions(PermissionLevel.TRIAL_MOD)
-    @checks.only_modmail_thread(_modmail_channel_id)
     async def reply(self, ctx: ApplicationContext, message: discord.Option(str, "The message you wish to reply with.")):
         """
         Replies to a modmail thread.
 
         """
         thread_hash = self.hash(ctx.channel)
+
+        if thread_hash not in self.cache:
+            embed = discord.Embed(
+                title="Error", description="You can't use this command here.")
+
+            await ctx.respond(embed=embed, ephemeral=True)
+
+            return
+
         
         if self.cache[thread_hash]["ended"]:
             embed = discord.Embed(title="Error",
@@ -326,13 +344,20 @@ class Modmail(BaseCog):
 
     @commands.slash_command(name="delete", description="Delete the most recently sent message in a modmail thread.", default_member_permissions=Permissions(manage_threads=True))
     @checks.has_permissions(PermissionLevel.TRIAL_MOD)
-    @checks.only_modmail_thread(_modmail_channel_id)
     async def delete(self, ctx: ApplicationContext):
         """
         Replies to a modmail thread.
 
         """
         thread_hash = self.hash(ctx.channel)
+        
+        if thread_hash not in self.cache:
+            embed = discord.Embed(
+                title="Error", description="You can't use this command here.")
+
+            await ctx.respond(embed=embed, ephemeral=True)
+
+            return
         
         if self.cache[thread_hash]["ended"]:
             embed = discord.Embed(title="Error",
@@ -384,11 +409,16 @@ class Modmail(BaseCog):
 
             return
 
+        if not self.cache[self._id]["modmail_role_id"] or not self.cache[self._id]["modmail_channel_id"]:
+            await ctx.respond("Modmail has not been setup.")
+
+            return
+
         member = await self.guild.fetch_member(ctx.author.id)
 
         thread: discord.Thread = await self.modmail_channel.create_thread(name=f"{ctx.author.id} — {title}")
 
-        role = await self.guild._fetch_role(self._modmail_role_id)
+        role = await self.guild._fetch_role(self.cache[self._id]["modmail_role_id"])
 
         embed = discord.Embed(
             description=f"{ctx.author.mention}\nReason for mail: {reason}", timestamp=datetime.now(), colour=Colour.green())
@@ -449,6 +479,14 @@ class Modmail(BaseCog):
             return
 
         thread_hash = self.hash(ctx.channel)
+
+        if thread_hash not in self.cache:
+            embed = discord.Embed(
+                title="Error", description="You can't use this command here.")
+
+            await ctx.respond(embed=embed, ephemeral=True)
+
+            return
 
         author_id = self.cache[thread_hash]["user"]
 
@@ -524,6 +562,30 @@ class Modmail(BaseCog):
     def hash(self, thread):
         s = thread.name + str(thread.id)
         return b64encode(bytes.fromhex(hashlib.sha224(s.encode()).hexdigest())).decode()[:16] #what the actual fuck
+
+
+    @_chn.command(name="set", description="Sets modmail channel.")
+    @checks.has_permissions(PermissionLevel.ADMINISTRATOR)
+    async def chn_set(self, ctx: discord.ApplicationContext, chn: discord.Option(discord.TextChannel, description="Channel to become modmail channel.")):
+        self.cache[self._id]["modmail_channel_id"] = chn.id
+
+        await self.update_db(self._id)
+
+        await ctx.respond("Successfully set new modmail channel")
+
+        await self.check_modmail()
+
+    @_role.command(name="set", description="Sets modmail channel.")
+    @checks.has_permissions(PermissionLevel.ADMINISTRATOR)
+    async def role_set(self, ctx: discord.ApplicationContext, role: discord.Option(discord.Role, description="Channel to become modmail channel.")):
+        self.cache[self._id]["modmail_role_id"] = role.id
+
+        await self.update_db(self._id)
+
+        await ctx.respond("Successfully set new modmail role")
+
+        await self.check_modmail()
+    
 
 
 def setup(bot):
