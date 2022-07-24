@@ -437,7 +437,7 @@ class Modmail(BaseCog):
 
         await ctx.defer()
 
-        parsed_owners = re.findall(r"\d{18}", self.bot.config["owners"])
+        parsed_owners = re.findall(r"\d+", self.bot.config["owners"])
         for owner in parsed_owners:
             member = await self.guild.fetch_member(int(owner))
             await thread.add_user(member)

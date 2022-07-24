@@ -6,7 +6,7 @@ import discord
 from discord.ext import commands
 from discord.ui import Select, Button, View
 
-from discord import ApplicationContext, Colour, Embed, Interaction, Permissions, SlashCommandGroup, TextChannel
+from discord import ApplicationContext, Colour, Embed, Interaction, Permissions, SlashCommandGroup, TextChannel, OptionChoice
 
 from core import checks
 from core.time import TimeConverter, InvalidTime
@@ -53,6 +53,7 @@ class Giveaway(BaseCog):
                             default_member_permissions=Permissions(manage_messages=True))
 
     async def after_load(self):
+        self.loop_cache = {}
         await self.start_countdowns()
 
     async def start_countdowns(self):
@@ -96,7 +97,7 @@ class Giveaway(BaseCog):
         unix = self.cache[message_id]["unixEndTime"] - datetime.now().timestamp()
 
         # add task to close giveaway after countdown has finished
-        self.bot.loop.call_later(unix, self.giveaway_end, message)
+        self.loop_cache[message_id] = self.bot.loop.call_later(unix, self.giveaway_end, message)
 
     async def add_enter_button(self, message: discord.Message):
         """
@@ -305,6 +306,185 @@ class Giveaway(BaseCog):
             title="Success", description="Giveaway was ended.", colour=Colour.green())
         await ctx.respond(embed=embed, ephemeral=True)
 
+
+
+    @_ga.command(name="edit", description="Edits a giveaway")
+    @checks.has_permissions(PermissionLevel.EVENT_ADMIN)
+    async def giveaway_edit(self, ctx: ApplicationContext, message_id: discord.Option(str, "message id of the giveaway to end early."), 
+            field: discord.Option(int, "The field you want to edit", choices=[OptionChoice("Reward", 0), 
+                OptionChoice("Winners", 1), OptionChoice("End", 2), OptionChoice("Required Roles", 3),
+                OptionChoice("Banned Roles", 4), OptionChoice("Tickets", 5)]), value: discord.Option(str, "Value to change to.", default="")):
+
+        await ctx.defer()
+
+        message_id = int(message_id)
+        # stop if the message is not a giveaway
+        if message_id not in self.cache:
+            embed = discord.Embed(
+                title="Error", description="Message is not an active giveaway.")
+            await ctx.respond(embed=embed, ephemeral=True)
+
+            return
+
+        giveaway = self.cache[message_id]
+        
+        channel: TextChannel = await self.guild.fetch_channel(
+            giveaway["channel"])
+        
+        try:
+            message = await channel.fetch_message(message_id)
+        except Exception as e:
+            self.bot.dispatch("error", e,
+                              f"There seems to be an active giveaway in {channel.mention} that the bot cannot access.",
+                              f"Delete the giveaway in {channel.mention} manually `ID: {message_id}`.")
+
+            self.cache.pop(message_id)
+            await self.update_db(message_id)
+
+            return
+
+        embed = message.embeds[0] 
+
+        if field == 0: #reward
+            giveaway["reward"] = value
+            await self.update_db(message_id)
+
+            embed.title = f"{value} giveaway!"
+
+            await message.edit(embed=embed)
+
+        elif field == 1:
+            giveaway["winners"] = int(value)
+            await self.update_db(message_id)
+
+            embed.description = f"A giveaway has started and will end on <t:{giveaway['unixEndTime']}:F>!\n{giveaway['winners']} participant{'s' if giveaway['winners'] > 1 else ''} will be selected at the end."
+
+            await message.edit(embed=embed)
+
+        elif field == 2:
+            duration = 0
+            try:
+                duration = TimeConverter(value)
+
+            except InvalidTime as e:
+                embed = discord.Embed(
+                    title="error", description=e, colour=Colour.red())
+                await ctx.respond(embed=embed, ephemeral=True)
+
+                return
+
+            # stop if amount is 0
+            if duration == 0:
+                embed = discord.Embed(
+                    title=f"Error", description="Time cannot be 0.", colour=Colour.red())
+                ctx.respond(embed=embed)
+
+                return
+            
+            giveaway["unixEndTime"] = int(duration.final.timestamp())
+            await self.update_db(message_id)
+
+            embed.description = f"A giveaway has started and will end on <t:{giveaway['unixEndTime']}:F>!\n{giveaway['winners']} participant{'s' if giveaway['winners'] > 1 else ''} will be selected at the end."
+
+            await message.edit(embed=embed)
+
+            self.loop_cache[message_id].cancel()
+
+            unix = self.cache[message_id]["unixEndTime"] - datetime.now().timestamp()
+
+            self.loop_cache[message_id] = self.bot.loop.call_later(unix, self.giveaway_end, message)
+
+        elif field == 3:
+            description = ""
+            required = await self.parse_roles(value)
+
+            giveaway["requiredRoles"] = required
+            await self.update_db(message_id)
+
+            for role in required:
+                description += f"<@&{role}>\n"
+
+            for i, f in enumerate(embed.fields):
+                if f.name.startswith("Roles allowed"):
+
+                    if description:
+                        embed.set_field_at(index=i, name="Roles allowed to participate",value=description)
+                    else:
+                        embed.remove_field(i)
+                    
+                    description = None
+
+                    break
+
+            if description:
+                embed.add_field(name="Roles allowed to participant", value=description)
+            
+            await message.edit(embed=embed)
+
+
+        elif field == 4:
+            description = ""
+            banned = await self.parse_roles(value)
+
+            giveaway["bannedRoles"] = banned
+            await self.update_db(message_id)
+
+            for role in banned:
+                description += f"<@&{role}>\n"
+
+            for i, f in enumerate(embed.fields):
+                if f.name.startswith("Roles banned"):
+
+                    if description:
+                        embed.set_field_at(index=i, name="Roles banned from participating",value=description)
+                    else:
+                        embed.remove_field(i)
+                    
+                    description = None
+
+                    break
+
+            if description:
+                embed.add_field(name="Roles banned from participating", value=description)
+            
+            await message.edit(embed=embed)
+
+        elif field == 5:
+            description = ""
+            weight = await self.parse_tickets(value)
+
+            giveaway["tickets"] = weight
+            await self.update_db(message_id)
+
+            for k, v in weight.items():
+                description += f"<@&{k}>: {v} ticket{'' if v==1 else 's'}\n"
+
+            for i, f in enumerate(embed.fields):
+                if f.name.startswith("Additional"):
+
+                    if description:
+                        embed.set_field_at(index=i, name="Additional Role Ticktes",value=description)
+                    else:
+                        embed.remove_field(i)
+                    
+                    description = None
+
+                    break
+
+            if description:
+                embed.add_field(name="Additional Role Ticktes", value=description)
+            
+            await message.edit(embed=embed)
+
+        embed = discord.Embed(
+            title="Success", description="Giveaway was edited.", colour=Colour.green())
+        await ctx.respond(embed=embed, ephemeral=True)
+        
+            
+
+        
+
+
     @_ga.command(name="create", description="Creates a new giveaway")
     @checks.has_permissions(PermissionLevel.EVENT_ADMIN)
     async def _ga_create(self, ctx: ApplicationContext, reward: discord.Option(str, "The name of the reward."),
@@ -427,7 +607,7 @@ class Giveaway(BaseCog):
 
 
     async def parse_roles(self, ids):
-        regex = r"\d{18}"
+        regex = r"\d+"
 
         return list(map(int, re.findall(regex, ids)))
 

@@ -77,7 +77,7 @@ class Moderation(BaseCog):
 
             ids = requests.get(url).text
 
-        regex = r"\d{18}"
+        regex = r"\d+"
 
         return re.findall(regex, ids)
 

@@ -26,7 +26,7 @@ class Configurator(BaseCog):
         "modrole", "Contains commands for managing mod roles.")
 
     async def get_member_ids(self, ids):
-        regex = r"\d{18}"
+        regex = r"\d+"
 
         return re.findall(regex, ids)
 
