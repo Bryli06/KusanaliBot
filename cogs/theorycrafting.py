@@ -392,7 +392,7 @@ class Theorycrafting(BaseCog):
     
     def get_captcha_callback(self, message):
         async def captcha(interaction: Interaction):
-            image = ImageCaptcha(width=280, height=90)
+            image = ImageCaptcha(width=280, height=90, fonts=['./fonts/captcha.ttf'])
             text = string_generator()
             print(text)
             data = image.generate(text)
@@ -401,7 +401,7 @@ class Theorycrafting(BaseCog):
 
 
             embed = discord.Embed(title="Please verify yourself before you vote.",
-                                description="Once you are ready to provide your answer click the button below.\n\n **NOTE:** The captcha is CaSe SeNsItIvE and does not inclue spaces.", colour=Colour.blue())
+                                description="Once you are ready to provide your answer click the button below.\n\n **NOTE:** The captcha only consists of lowercase letters, numbers, and does not inclue spaces.", colour=Colour.blue())
 
             embed.set_image(url="attachment://image.png")
 
@@ -584,7 +584,7 @@ def list_to_string(l):
     return r
 
 
-def string_generator(length=6, chars=string.ascii_lowercase + string.ascii_uppercase):
+def string_generator(length=6, chars=string.ascii_lowercase + string.digits):
     return ''.join(random.choice(chars) for _ in range(length))
 
 def setup(bot):
