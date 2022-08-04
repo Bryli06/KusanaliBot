@@ -605,6 +605,7 @@ class Giveaway(BaseCog):
 
 
     @_ga.command(name="reroll", description="rerolls a giveaway")
+    @checks.has_permissions(PermissionLevel.EVENT_ADMIN)
     async def reroll(self, ctx: ApplicationContext, messageid: discord.Option(str, "giveaway to reroll"), amount: discord.Option(int, "Number of new winners", default=1)):
         """
         Ends an active giveaway.
