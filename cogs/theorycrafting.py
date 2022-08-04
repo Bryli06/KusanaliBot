@@ -74,7 +74,7 @@ class Theorycrafting(BaseCog):
     async def after_load(self):
         for message_id in self.cache[self._id]["active"]:
             await self.start_vote(message_id)
-            if self.cache[message_id]["end"]:
+            if "end" in self.cache[message_id]:
                 await self._end(message_id, self.cache[message_id]["end"])
         
 
@@ -320,7 +320,7 @@ class Theorycrafting(BaseCog):
                 value=str(i),
                 ))
         select = Select(
-            placeholder="Select which vote to end",
+            placeholder="Select which vote to view results",
             options=options,
             )
 
@@ -545,12 +545,13 @@ class Theorycrafting(BaseCog):
 
 
     def get_results(self, messageid):
-        votes = [0] * (len(self.cache[messageid]["options"]) + 1)
+        votes = [0] * (len(self.cache[messageid]["options"]))
+        abstain_votes = 0
 
         for voter in self.cache[messageid]["voters"].values():
             for vote in voter:
                 if vote == "Abstain":
-                    votes[-1] += 1
+                    abstain_votes += 1
                     continue
                 votes[ord(vote) - ord('A')] += 1
 
@@ -561,6 +562,7 @@ class Theorycrafting(BaseCog):
             message += f"\n**{c}: **{v}"
             c = chr(ord(c)+1)
 
+        message += f"\n**Abstain: **{abstain_votes}"
         return message
 
 
