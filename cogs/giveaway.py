@@ -228,7 +228,7 @@ class Giveaway(BaseCog):
                 winner_weights.append(participant_weights.pop(index))
 
         
-        giveaway["particpant_weights"] = participant_weights
+        giveaway["participant_weights"] = participant_weights
         giveaway["participant_ids"] = participant_ids
 
         giveaway["winner_weights"] = winner_weights
@@ -581,7 +581,6 @@ class Giveaway(BaseCog):
             
                 await interaction.response.edit_message(view=self.view)
 
-
         class denyButton(discord.ui.Button):
             def __init__(self):
 
@@ -605,6 +604,77 @@ class Giveaway(BaseCog):
 
 
 
+    @_ga.command(name="reroll", description="rerolls a giveaway")
+    async def reroll(self, ctx: ApplicationContext, messageid: discord.Option(str, "giveaway to reroll"), amount: discord.Option(int, "Number of new winners", default=1)):
+        """
+        Ends an active giveaway.
+        
+        """
+
+        message_id = int(messageid)
+
+        if message_id not in self.cache:
+            embed = discord.Embed(
+                title="Error", description="Message is not an active giveaway.")
+            await ctx.respond(embed=embed, ephemeral=True)
+
+            return
+
+        giveaway = self.cache[message_id]
+        
+        channel: TextChannel = await self.guild.fetch_channel(
+            giveaway["channel"])
+        
+        try:
+            message = await channel.fetch_message(message_id)
+        except Exception as e:
+            self.bot.dispatch("error", e,
+                              f"There seems to be an active giveaway in {channel.mention} that the bot cannot access.",
+                              f"Delete the giveaway in {channel.mention} manually `ID: {message_id}`.")
+
+            self.cache.pop(message_id)
+            await self.update_db(message_id)
+
+            return
+
+        giveaway = self.cache[message.id]
+
+        participants = giveaway["participant_weights"]
+        participant_ids = giveaway["participant_ids"]
+
+        new_winners = []
+        new_ids = []
+
+        # all participants win if the number of winners is greater than the number of participants
+        if amount >= len(participant_ids):
+            new_ids = participant_ids
+            new_winners = participants
+            
+            participant_ids = []
+            participants = []
+        else:
+            for i in range(amount):
+                winner_id = random.choices(participant_ids, participants)[0]
+
+                index = participant_ids.index(winner_id)
+
+                new_ids.append(participant_ids.pop(index))
+                new_winners.append(participants.pop(index))
+
+        
+        giveaway["participant_weights"] = participants
+        giveaway["participant_ids"] = participant_ids
+
+        giveaway["winner_weights"].extend(new_winners)
+        giveaway["winner_ids"].extend(new_ids)
+
+        await self.update_db(message_id)
+    
+        description = "Congratulations to: "
+        for winner_id in new_ids:
+            description += f"<@{winner_id}> "
+
+        await ctx.respond(description)
 
     async def parse_roles(self, ids):
         regex = r"\d+"

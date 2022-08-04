@@ -122,14 +122,12 @@ class Leveling(BaseCog):
 
                 break
 
-        path = await drawer.create_rank_card(user.display_avatar.url, exp, f"{user.display_name}#{user.discriminator}", rank)
+        image = drawer.create_rank_card(user.display_avatar.url, exp, f"{user.display_name}#{user.discriminator}", rank)
 
-        file = discord.File(path)
+        file = discord.File(fp=image, filename="image.png")
 
         await ctx.defer()
         await ctx.respond(file=file)
-
-        os.remove(path)
 
     @commands.user_command(name="Get user rank")
     @checks.has_permissions(PermissionLevel.REGULAR)

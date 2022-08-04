@@ -1,6 +1,7 @@
 import webbrowser
 from PIL import Image, ImageDraw, ImageFont
 import requests
+import io
 
 import base64
 
@@ -12,10 +13,12 @@ from core import calculate_level
 def attach(source: Image.Image, target: Image.Image, percent, mode=(1, 1)):
     pos = (int(source.size[0] * percent[0] - target.size[0] * mode[0] / 2),
            int(source.size[1] * percent[1] - target.size[1] * mode[1] / 2))
+
     source.paste(target, pos)
 
 
-async def create_rank_card(url, exp, name, rank, upload = False):
+def create_rank_card(url, exp, name, rank, upload=False):
+    print(url, exp, name, rank)
     level = calculate_level.inverse(exp)
     exp_needed = calculate_level.next_level(exp)
 
@@ -33,27 +36,25 @@ async def create_rank_card(url, exp, name, rank, upload = False):
     bar = Image.new("RGBA", (485 + int(850 * progress), 600), (74, 124, 117))
 
     base.paste(bar, (0, 0))
-    attach(base, avatar, (0.142, 0.4325))
     base.paste(bg, (0, 0), mask=bg)
+    attach(base, avatar, (0.2, 0.5))
 
-    bold = ImageFont.truetype("./fonts/calibri-bold.ttf", 80)
+    name = ImageFont.truetype("./fonts/calibri-regular.ttf", 20)
     regu = ImageFont.truetype("./fonts/calibri-regular.ttf", 80)
     draw = ImageDraw.Draw(base)
 
-    draw.text((500, 40), name, (74, 96, 124), font=bold)
+    draw.text((700, 400), name, (74, 96, 124), font=name)
     draw.text(
-        (500, 475), f"Level {level}     #{rank}", (74, 96, 124), font=regu)
+        (700, 120), f"Level {level}     #{rank}", (74, 96, 124), font=regu)
 
     base = base.resize((600, 200))
 
-    id = random.randint(0, 1000000)
+    temp = io.BytesIO()
 
-    base.save(f"./assets/rank{id}.png")
+    base.save(temp, format="png")
+    temp.seek(0)
 
-    if upload:
-        return await upload_image(f"./assets/rank{id}.png")
-
-    return f"./assets/rank{id}.png"
+    return temp 
 
 
 async def upload_image(path):
@@ -71,3 +72,7 @@ async def upload_image(path):
         res = requests.post(url, payload)
 
         return res.json()["data"]["url"]
+
+
+create_rank_card("https://cdn.discordapp.com/avatars/436363390844403732/40766763c1fd3c826ee130ad930f3040.png?size=1024", 203 "bryanli#2718", 1)
+

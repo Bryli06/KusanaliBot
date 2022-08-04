@@ -930,6 +930,7 @@ class Logging(BaseCog):
             await channel.send(content=url, embed=embed)
 
 
+
     @ _lg.command(name="set", description="Sets a logs channel.")
     @ checks.has_permissions(PermissionLevel.ADMINISTRATOR)
     async def _lg_set(self, ctx: ApplicationContext, log_channel: discord.Option(str, "The channel you want to set. Log channel is the default if none is set.",

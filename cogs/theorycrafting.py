@@ -1,12 +1,21 @@
 import discord
-from discord.ui import Button, View, Select
+from discord.ui import Button, View, Select, Modal, InputText
 from discord import ApplicationContext, Colour, SlashCommandGroup, Interaction, TextChannel, OptionChoice
 from discord.ext import commands
 
-
+from datetime import datetime
 from core import checks
+from captcha.image import ImageCaptcha
+import shlex
+import string
+import hashlib
+from base64 import b64encode
+import random
+
+from core.time import TimeConverter, InvalidTime
 from core.base_cog import BaseCog
 from core.checks import PermissionLevel
+from core.ui import captcha_modal
 
 class Theorycrafting(BaseCog):
     _id="theorycrafting"
@@ -14,6 +23,7 @@ class Theorycrafting(BaseCog):
     default_cache={
         "active": [],
         "archive": [],
+        "log": None,
     }
     
     async def load_cache(self): #each countdown gets its own document
@@ -64,6 +74,8 @@ class Theorycrafting(BaseCog):
     async def after_load(self):
         for message_id in self.cache[self._id]["active"]:
             await self.start_vote(message_id)
+            if self.cache[message_id]["end"]:
+                await self._end(message_id, self.cache[message_id]["end"])
         
 
     @commands.slash_command(name="idp", description="It depends")
@@ -106,11 +118,37 @@ class Theorycrafting(BaseCog):
 
     _vote = _tc.create_subgroup(name="vote", description="commands for managing tc polls")
 
-    @_vote.command(name="create", description="create an anonymous poll with options yes, no, abstain")
+    @_vote.command(name="create", description="create an anonymous poll with options")
     @checks.has_permissions(PermissionLevel.TC_ADMIN)
-    async def vote_create(self, ctx: ApplicationContext, title: discord.Option(str, "Title of the poll"), description: discord.Option(str, "Description of the poll")):
+    async def vote_create(self, ctx: ApplicationContext, title: discord.Option(str, "Title of the poll"), 
+            description: discord.Option(str, "Description of the poll"), options: discord.Option(str, "Options members can vote for"), 
+            max_selections: discord.Option(int, min_value=1, description="Max number of options users can pick", default=-1),
+            duration: discord.Option(str, "Duration of poll", default="inf")):
         
         await ctx.defer(ephemeral=True)
+        
+        after = None
+        if duration != "inf":
+            try:
+                after = TimeConverter(duration)
+
+            except InvalidTime as e:
+                embed = discord.Embed(
+                    title="Error", description=e, colour=Colour.red())
+                await ctx.respond(embed=embed)
+
+                return
+
+        options = shlex.split(options)
+
+        if max_selections == -1:
+            max_selections = len(options)
+
+        description = f"{description}\n"
+        c = 'A'
+        for option in options:
+            description+=f"\n{c}: {option}"
+            c = chr(ord(c)+1) # who uses iterators in python ew
 
         embed = discord.Embed(title=title, description=description, color=Colour.blue())
 
@@ -131,12 +169,17 @@ class Theorycrafting(BaseCog):
                 message = await ctx.channel.send(embed=embed)
 
                 self.cog.cache[message.id] = {
-                    "yes": [],
-                    "no": [],
-                    "abstain": [],
                     "title": title,
                     "channel": ctx.channel.id, 
+                    "options": options,
+                    "voters": {},
+                    "selections": max_selections,
                 }
+
+                if after:
+                    self.cog.cache[message.id]["end"] = after.final.timestamp()
+                    await self.cog._end(message.id, after.final.timestamp())
+                    
 
                 self.cog.cache[self.cog._id]["active"].append(message.id)
 
@@ -169,9 +212,55 @@ class Theorycrafting(BaseCog):
         await ctx.respond(embed=embed, view=view, ephemeral=True)
 
 
+    async def _end(self, messageid, time):
+        end = datetime.fromtimestamp(int(time))
+        now = datetime.now()
+        closetime = (end - now).total_seconds() if time else 0
+
+        if closetime > 0:
+            self.bot.loop.call_later(closetime, self._end_after, messageid)
+        else:
+            await self._end_helper(messageid)
+
+        
+    async def _end_helper(self, messageid):
+        if messageid not in self.cache[self._id]["active"]:
+            return
+
+        self.cache[self._id]["active"].remove(messageid)
+        self.cache[self._id]["archive"].append(messageid)
+
+        await self.update_db(self._id)
+        message = await self.get_message_from_id(messageid)
+
+        embed = message.embeds[0]
+        embed.description = f"{embed.description}\n\n__Results:__{self.get_results(messageid)}"
+        embed.colour = Colour.red()
+
+        await message.edit(embed=embed, view=None)
+
+        embed = discord.Embed(title="Vote ended", description=f"Vote for {self.cache[messageid]['title']} automatically ended.")
+        
+        if self.cache[self._id]["log"]:
+            chn = await self.guild.fetch_channel(self.cache[self._id]["log"])
+
+            await chn.send(embed=embed)
+
+        
+        
+        
+    def _end_after(self, messageid):
+        return self.bot.loop.create_task(self._end_helper(messageid))
+
     @_vote.command(name="end", description="ends an existing vote")
     @checks.has_permissions(PermissionLevel.TC_ADMIN)
     async def vote_end(self, ctx: ApplicationContext):
+
+        if not self.cache[self._id]["active"]:
+            embed = discord.Embed(title="Error", description="No active votes.", colour=Colour.red())
+
+            await ctx.respond(embed=embed)
+            return
 
         options = []
         for i, vote in enumerate(self.cache[self._id]["active"]):
@@ -191,17 +280,60 @@ class Theorycrafting(BaseCog):
             await self.update_db(self._id)
             message = await self.get_message_from_id(message_id)
 
-            poll = self.cache[message_id]
-
             embed = message.embeds[0]
-            embed.description = f"{embed.description}\n\n__Results:__\nYes: {len(poll['yes'])}\nNo: {len(poll['no'])}\nAbstain: {len(poll['abstain'])}"
+            embed.description = f"{embed.description}\n\n__Results:__{self.get_results(message_id)}"
             embed.colour = Colour.red()
 
             await message.edit(embed=embed, view=None)
 
-            embed=discord.Embed(title="Report", description="Successfully ended vote and results shown.")
+            embed = discord.Embed(title="Report", description="Successfully ended vote and results shown.")
 
             await interaction.response.send_message(embed=embed)
+
+            embed = discord.Embed(title="Vote ended", description=f"Vote for {self.cache[message_id]['title']} ended by {ctx.author.mention}.")
+
+            if self.cache[self._id]["log"]:
+                chn = await self.guild.fetch_channel(self.cache[self._id]["log"])
+
+                await chn.send(embed=embed)
+
+
+        select.callback = _select_callback
+
+        view = View(select, timeout=60)
+        await ctx.respond(view=view, ephemeral=True)
+
+    @_vote.command(name="results", description="Gets results of an existing vote")
+    @checks.has_permissions(PermissionLevel.TC_ADMIN)
+    async def vote_results(self, ctx: ApplicationContext):
+
+        if not self.cache[self._id]["active"]:
+            embed = discord.Embed(title="Error", description="No active votes.", colour=Colour.red())
+
+            await ctx.respond(embed=embed)
+            return
+
+        options = []
+        for i, vote in enumerate(self.cache[self._id]["active"]):
+            options.append(discord.SelectOption(
+                label=self.cache[vote]["title"],
+                value=str(i),
+                ))
+        select = Select(
+            placeholder="Select which vote to end",
+            options=options,
+            )
+
+        async def _select_callback(interaction: Interaction):
+            message_id = self.cache[self._id]["active"][int(select.values[0])]
+
+            message = await self.get_message_from_id(message_id)
+
+            embed = message.embeds[0]
+            embed.description = f"{embed.description}\n\n__Results:__{self.get_results(message_id)}"
+            embed.colour = Colour.green()
+
+            await interaction.response.send_message(embed=embed, ephemeral=True)
 
         select.callback = _select_callback
 
@@ -211,177 +343,146 @@ class Theorycrafting(BaseCog):
 
 
     async def add_buttons(self, message: discord.Message):
+        async def abstain_callback(interaction: Interaction):
+            poll = self.cache[message.id]
+
+            user_id = hash(str(interaction.user.id))
+
+            if user_id in poll["voters"]:
+                old = poll["voters"][user_id]
+                poll["voters"][user_id] = ["Abstain"]
+
+                await self.update_db(message.id)
+
+                embed = discord.Embed(
+                        title="Report", description=f"Switched votes from {list_to_string(old)} to Abstain",
+                        colour=Colour.green())
+                
+                await self.vote_log(interaction.user, f"switched votes from {list_to_string(old)} to Abstain.")
+
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+
+                return
+
+
+            poll["voters"][user_id] = ["Abstain"]
+            
+            await self.update_db(message.id)
+
+            embed = message.embeds[0]
+            embed.title = f"{poll['title']} ({len(poll['voters'])} voted)"
+
+            await message.edit(embed=embed)
+            
+            embed = discord.Embed(title="Report", description=f"Successfully voted for Abstain.", colour=Colour.green())
+            await self.vote_log(interaction.user, "voted for Abstain.") 
+
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+
         
-        async def _yes_callback(interaction: Interaction):
-            poll = self.cache[message.id]
+        abstain = Button(label="✨ABSTAIN✨", style=discord.ButtonStyle.blurple)
+        abstain.callback = abstain_callback
 
-            user_id = interaction.user.id
+        vote = Button(label="vote", style=discord.ButtonStyle.gray)
+        vote.callback = self.get_captcha_callback(message)
 
-            if user_id in poll["yes"]:
-                embed = discord.Embed(
-                        title="Warning", description="You have already voted for Yes",
-                        colour=Colour.red())
-
-                await interaction.response.send_message(embed=embed, ephemeral=True)
-
-                return
-
-            if user_id in poll["no"]:
-                poll["no"].remove(user_id)
-                poll["yes"].append(user_id)
-
-                await self.update_db(message.id)
-
-                embed = discord.Embed(title="Report", description="Switched vote from No to Yes.", colour=Colour.green())
-
-                await interaction.response.send_message(embed=embed, ephemeral=True)
-
-                return
-                
-
-            if user_id in poll["abstain"]:
-                poll["abstain"].remove(user_id)
-                poll["yes"].append(user_id)
-
-                await self.update_db(message.id)
-
-                embed = discord.Embed(title="Report", description="Switched vote from Abstain to Yes.", colour=Colour.green())
-
-                await interaction.response.send_message(embed=embed, ephemeral=True)
-
-                return
-
-            poll["yes"].append(user_id)
-            
-            await self.update_db(message.id)
-
-            embed = message.embeds[0]
-            embed.title = f"{poll['title']} ({len(poll['yes']) + len(poll['no']) + len(poll['abstain'])} voted)"
-
-            await message.edit(embed=embed)
-                
-            embed = discord.Embed(title="Report", description="Successfully voted for Yes.", colour=Colour.green())
-
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-            
-
-        async def _no_callback(interaction: Interaction):
-            poll = self.cache[message.id]
-
-            user_id = interaction.user.id
-
-            if user_id in poll["no"]:
-                embed = discord.Embed(
-                        title="Warning", description="You have already voted for No",
-                        colour=Colour.red())
-
-                await interaction.response.send_message(embed=embed, ephemeral=True)
-
-                return
-
-            if user_id in poll["yes"]:
-                poll["yes"].remove(user_id)
-                poll["no"].append(user_id)
-
-                await self.update_db(message.id)
-
-                embed = discord.Embed(title="Report", description="Switched vote from Yes to No.", colour=Colour.green())
-
-                await interaction.response.send_message(embed=embed, ephemeral=True)
-
-                return
-                
-
-            if user_id in poll["abstain"]:
-                poll["abstain"].remove(user_id)
-                poll["no"].append(user_id)
-
-                await self.update_db(message.id)
-
-                embed = discord.Embed(title="Report", description="Switched vote from Abstain to No.", colour=Colour.green())
-
-                await interaction.response.send_message(embed=embed, ephemeral=True)
-
-                return
-
-            poll["no"].append(user_id)
-            
-            await self.update_db(message.id)
-
-            embed = message.embeds[0]
-            embed.title = f"{poll['title']} ({len(poll['yes']) + len(poll['no']) + len(poll['abstain'])} voted)"
-
-            await message.edit(embed=embed)
-            
-            embed = discord.Embed(title="Report", description="Successfully voted for No.", colour=Colour.green())
-
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-        
-        async def _abstain_callback(interaction: Interaction):
-            poll = self.cache[message.id]
-
-            user_id = interaction.user.id
-
-            if user_id in poll["abstain"]:
-                embed = discord.Embed(
-                        title="Warning", description="You have already voted for Abstain",
-                        colour=Colour.red())
-
-                await interaction.response.send_message(embed=embed, ephemeral=True)
-
-                return
-
-            if user_id in poll["yes"]:
-                poll["yes"].remove(user_id)
-                poll["abstain"].append(user_id)
-
-                await self.update_db(message.id)
-
-                embed = discord.Embed(title="Report", description="Switched vote from Yes to Abstain.", colour=Colour.green())
-
-                await interaction.response.send_message(embed=embed, ephemeral=True)
-
-                return
-                
-
-            if user_id in poll["no"]:
-                poll["no"].remove(user_id)
-                poll["abstain"].append(user_id)
-
-                await self.update_db(message.id)
-
-                embed = discord.Embed(title="Report", description="Switched vote from No to Abstain.", colour=Colour.green())
-
-                await interaction.response.send_message(embed=embed, ephemeral=True)
-
-                return
-
-            poll["abstain"].append(user_id)
-            
-            await self.update_db(message.id)
-
-            embed = message.embeds[0]
-            embed.title = f"{poll['title']} ({len(poll['yes']) + len(poll['no']) + len(poll['abstain'])} voted)"
-
-            await message.edit(embed=embed)
-            
-            embed = discord.Embed(title="Report", description="Successfully voted for Abstain.", colour=Colour.green())
-
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-
-        yes = Button(label="Yes", style=discord.ButtonStyle.blurple)
-        yes.callback = _yes_callback
-
-        no = Button(label="No", style=discord.ButtonStyle.blurple)
-        no.callback = _no_callback
-
-        abstain = Button(label="Abstain", style=discord.ButtonStyle.blurple)
-        abstain.callback = _abstain_callback
-
-        view = View(yes, no, abstain, timeout=None)
+        view = View(abstain, vote, timeout=None)
 
         await message.edit(view=view)
-                
+    
+    def get_captcha_callback(self, message):
+        async def captcha(interaction: Interaction):
+            image = ImageCaptcha(width=280, height=90)
+            text = string_generator()
+            print(text)
+            data = image.generate(text)
+            data.seek(0)
+            file = discord.File(fp=data, filename="image.png")
+
+
+            embed = discord.Embed(title="Please verify yourself before you vote.",
+                                description="Once you are ready to provide your answer click the button below.\n\n **NOTE:** The captcha is CaSe SeNsItIvE and does not inclue spaces.", colour=Colour.blue())
+
+            embed.set_image(url="attachment://image.png")
+
+            answer = Button(label="Answer", style=discord.ButtonStyle.blurple)
+
+            view = View(answer, timeout=60)
+
+            next_view = self.get_vote_view(message)
+
+            async def _answer_callback(interaction: discord.Interaction):
+                await interaction.response.send_modal(captcha_modal(self, text, view, interaction, next_view))
+
+            answer.callback = _answer_callback
+
+            await interaction.response.send_message(embed=embed, file=file, view=view, ephemeral=True)
+
+        return captcha
+
+    def get_vote_view(self, message):
+        options = []
+        c = 'A'
+        for option in self.cache[message.id]["options"]:
+            options.append(discord.SelectOption(
+                label=c,
+                value=c,
+                description=option
+            ))
+            c = chr(ord(c)+1)
+
+        vote = Select(
+            placeholder="Select choices",
+            max_values=self.cache[message.id]["selections"],
+            options=options
+        )
+
+        vote.callback = self.vote_callback(message, vote)
+
+        return View(vote)
+
+    def vote_callback(self, message, votes):
+        async def _callback(interaction: Interaction):
+            poll = self.cache[message.id]
+
+            user_id = hash(str(interaction.user.id))
+
+            if user_id in poll["voters"]:
+                old = poll["voters"][user_id]
+                poll["voters"][user_id] = votes.values
+
+                await self.update_db(message.id)
+
+                embed = discord.Embed(
+                        title="Report", description=f"Switched votes from {list_to_string(old)} to {list_to_string(votes.values)}",
+                        colour=Colour.green())
+
+                await self.vote_log(interaction.user, f"switched votes from {list_to_string(old)} to {list_to_string(votes.values)}.")
+
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+
+                return
+
+
+            poll["voters"][user_id] = votes.values
+            
+            await self.update_db(message.id)
+
+            embed = message.embeds[0]
+            embed.title = f"{poll['title']} ({len(poll['voters'])} voted)"
+
+            await message.edit(embed=embed)
+            
+            embed = discord.Embed(title="Report", description=f"Successfully voted for {list_to_string(votes.values)}.", colour=Colour.green())
+
+            await self.vote_log(interaction.user, f"voted for {list_to_string(votes.values)}.") 
+
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+
+        return _callback
+
+
+ 
     async def start_vote(self, message_id):
         message = await self.get_message_from_id(message_id)
 
@@ -405,7 +506,89 @@ class Theorycrafting(BaseCog):
 
         return message
 
+    @_vote.command(name="logger", description="sets vote logs") 
+    @checks.has_permissions(PermissionLevel.ADMINISTRATOR)
+    async def setlogger(self, ctx: ApplicationContext, channel: discord.Option(discord.TextChannel, "Channel to log to")):
+        self.cache[self._id]["log"] = channel.id
+        await self.update_db(self._id)
+        
+        embed = discord.Embed(
+            title="Success", description=f"Set logs channel as {channel.mention}.", colour=Colour.green())
+        await ctx.respond(embed=embed)
 
+
+
+    async def captcha_log(self, member, captcha, answer):
+        if captcha != answer:
+            embed = discord.Embed(title="Verification attempted", description=f"Member {member.mention}`{member.name}#{member.discriminator}` incorrectly entered captcha. \n\n**Correct Answer:** {answer}\n**Submitted Answer:** {captcha}",
+                colour=Colour.red(), timestamp=datetime.now())
+
+        else:
+            embed = discord.Embed(title="Verification Successful", description=f"Member {member.mention}`{member.name}#{member.discriminator}` solved the captcha. \n\n**Correct Answer:** {answer}",
+                colour=Colour.green(), timestamp=datetime.now())
+
+        if self.cache[self._id]["log"]:
+            chn = await self.guild.fetch_channel(self.cache[self._id]["log"])
+
+            await chn.send(embed=embed)
+
+
+
+    async def vote_log(self, member, message):
+        embed = discord.Embed(title="Member vote changed", description=f"Member {member.mention}`{member.name}#{member.discriminator}` {message}",
+                colour=Colour.blue(), timestamp=datetime.now())
+        
+        if self.cache[self._id]["log"]:
+            chn = await self.guild.fetch_channel(self.cache[self._id]["log"])
+
+            await chn.send(embed=embed)
+
+
+    def get_results(self, messageid):
+        votes = [0] * (len(self.cache[messageid]["options"]) + 1)
+
+        for voter in self.cache[messageid]["voters"].values():
+            for vote in voter:
+                if vote == "Abstain":
+                    votes[-1] += 1
+                    continue
+                votes[ord(vote) - ord('A')] += 1
+
+        message = ""
+
+        c = 'A'
+        for v in votes:
+            message += f"\n**{c}: **{v}"
+            c = chr(ord(c)+1)
+
+        return message
+
+
+
+
+
+
+
+        
+
+
+def list_to_string(l):
+    r = l[0]
+
+    for i in l[1:-1]:
+        r += ", " + i
+
+    if len(l) > 1:
+        r += " and " + l[-1]
+
+    return r
+
+
+def string_generator(length=6, chars=string.ascii_lowercase + string.ascii_uppercase):
+    return ''.join(random.choice(chars) for _ in range(length))
 
 def setup(bot):
     bot.add_cog(Theorycrafting(bot))
+    
+def hash(s):
+    return b64encode(bytes.fromhex(hashlib.sha224(s.encode()).hexdigest())).decode()[:16] #what the actual fuck
