@@ -4,6 +4,7 @@ import discord
 from discord.ext import commands
 from discord import ApplicationContext, Colour, Permissions, SlashCommandGroup
 
+import io
 from datetime import datetime, timezone
 from dateutil import relativedelta
 
@@ -18,7 +19,7 @@ from PIL import Image, ImageFont, ImageDraw
 class Countdown(BaseCog):
     _id = "countdown"
 
-    kusanali_drop = 1664953200 #october 5th 2022
+    kusanali_drop = 1665903600 #november 16th 2022
 
     default_cache = { }
 
@@ -181,6 +182,7 @@ class Countdown(BaseCog):
         Gets the countdown until Kusanali drop and sends it as an image.
 
         """
+        await ctx.defer()
 
         diff = round(Countdown.kusanali_drop 
                         - datetime.now().timestamp())
@@ -189,25 +191,35 @@ class Countdown(BaseCog):
         h, m = divmod(m, 60)
         d, h = divmod(h, 24)
 
-        font = ImageFont.truetype("./fonts/blue-yellow.ttf", 120)
-        cd_image = Image.open("./assets/countdown_template.png")
+        font = ImageFont.truetype("./fonts/blue-yellow.ttf", 250)
+        cd_image = Image.open("./assets/countdown_template.jpg")
 
         draw = ImageDraw.Draw(cd_image)
 
         # coordinates found via pixspy.com
-        width, height = draw.textsize(f"{d}", font=font)
-        draw.text(((253-width)/2, (499-height)/2), f"{d}", font=font)
+        width, height = get_text_dimensions(f"{d}", font)
+        draw.text((232-width/2, 538-height/2), f"{d}", font=font)
 
-        width, height = draw.textsize(f"{h}", font=font)
-        draw.text(((767-width)/2, (499-height)/2), f"{h}", font=font)
+        width, height = get_text_dimensions(f"{h}", font)
+        draw.text((618-width/2, 538-height/2), f"{h}", font=font)
 
-        width, height = draw.textsize(f"{m}", font=font)
-        draw.text(((1249-width)/2, (499-height)/2), f"{m}", font=font)
+        width, height = get_text_dimensions(f"{m}", font)
+        draw.text((1003-width/2, 538-height/2), f"{m}", font=font)
 
-        cd_image.save("./assets/countdown.png")
+        temp = io.BytesIO()
+        cd_image.save(temp, format="png")
+        temp.seek(0)
 
-        await ctx.respond(file=discord.File('./assets/countdown.png'))
+        await ctx.respond(file=discord.File(fp=temp, filename="cd.png"))
 
+
+def get_text_dimensions(text_string, font):
+    ascent, descent = font.getmetrics()
+
+    text_width = font.getmask(text_string).getbbox()[2]
+    text_height = font.getmask(text_string).getbbox()[3] + descent
+
+    return (text_width, text_height)
 
 def setup(bot):
     bot.add_cog(Countdown(bot))

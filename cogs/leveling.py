@@ -122,7 +122,7 @@ class Leveling(BaseCog):
 
                 break
 
-        image = drawer.create_rank_card(user.display_avatar.url, exp, f"{user.display_name}#{user.discriminator}", rank)
+        image = drawer.create_rank_card(user.display_avatar.url, exp, f"{user.name}#{user.discriminator}", rank)
 
         file = discord.File(fp=image, filename="image.png")
 
