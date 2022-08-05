@@ -94,7 +94,7 @@ class Moderation(BaseCog):
 
     @commands.slash_command(name="ban", description="Bans a member", default_member_permissions=Permissions(ban_members=True))
     @commands.max_concurrency(1, wait=True)
-    @checks.has_permissions(PermissionLevel.MOD)
+    @checks.has_permissions(PermissionLevel.TRIAL_MOD)
     async def ban(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to ban."),
                   duration: discord.Option(str, description="The duration of the ban.", default="inf"),
                   reason: discord.Option(str, description="Reason for ban.", default="No reason given.")):
