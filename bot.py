@@ -40,11 +40,8 @@ class KusanaliBot(commands.Bot):
 
         self.on_start()
 
-        # counter for done loading cogs tasks, used to determine when to run after_load()
         self.tasks_done = 0
 
-        # wait for tasks to be done
-        self.loop.create_task(self.wait_for_tasks())
 
     def on_start(self):
 
@@ -59,12 +56,11 @@ class KusanaliBot(commands.Bot):
                 logger.error(f"Failed to load {cog}")
                 logger.error(f"Error: {e}")
 
-    async def wait_for_tasks(self):
-        # waits until all the loding cogs tasks are done
-        while self.tasks_done < len(self.cogs):
-            await asyncio.sleep(1)
+    async def increment_tasks(self):
+        self.tasks_done += 1
+        if self.tasks_done == len(self.cogs):
+            await self.after_start()
 
-        await self.after_start()
 
     async def after_start(self):
         # executes the after_load() method inside cogs

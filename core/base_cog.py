@@ -41,7 +41,7 @@ class BaseCog(commands.Cog):
         self.guild: discord.Guild = await self.bot.fetch_guild(self.bot.config["guild_id"])
 
         # signal that the task is finished by incrementing tasks_done
-        self.bot.tasks_done = self.bot.tasks_done + 1
+        await self.bot.increment_tasks()
 
     async def after_load(self): # gets called after cogs have finished loading to avoid exceptions
         pass

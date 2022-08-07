@@ -53,7 +53,7 @@ class Theorycrafting(BaseCog):
         
         self.guild: discord.Guild = await self.bot.fetch_guild(self.bot.config["guild_id"])
         
-        self.bot.tasks_done = self.bot.tasks_done + 1
+        await self.bot.increment_tasks()
 
 
     async def update_db(self, _id): #we need a different insert command that allows us to insert into seperate documents
@@ -151,6 +151,8 @@ class Theorycrafting(BaseCog):
             c = chr(ord(c)+1) # who uses iterators in python ew
 
         embed = discord.Embed(title=title, description=description, color=Colour.blue())
+
+        options = dict.fromkeys(options + ['Abstain'], 0)
 
         class confirmButton(discord.ui.Button):
             def __init__(self, cog):
@@ -303,44 +305,6 @@ class Theorycrafting(BaseCog):
         view = View(select, timeout=60)
         await ctx.respond(view=view, ephemeral=True)
 
-    @_vote.command(name="results", description="Gets results of an existing vote")
-    @checks.has_permissions(PermissionLevel.TC_ADMIN)
-    async def vote_results(self, ctx: ApplicationContext):
-
-        if not self.cache[self._id]["active"]:
-            embed = discord.Embed(title="Error", description="No active votes.", colour=Colour.red())
-
-            await ctx.respond(embed=embed)
-            return
-
-        options = []
-        for i, vote in enumerate(self.cache[self._id]["active"]):
-            options.append(discord.SelectOption(
-                label=self.cache[vote]["title"],
-                value=str(i),
-                ))
-        select = Select(
-            placeholder="Select which vote to view results",
-            options=options,
-            )
-
-        async def _select_callback(interaction: Interaction):
-            message_id = self.cache[self._id]["active"][int(select.values[0])]
-
-            message = await self.get_message_from_id(message_id)
-
-            embed = message.embeds[0]
-            embed.description = f"{embed.description}\n\n__Results:__{self.get_results(message_id)}"
-            embed.colour = Colour.green()
-
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-
-        select.callback = _select_callback
-
-        view = View(select, timeout=60)
-        await ctx.respond(view=view, ephemeral=True)
-
-
 
     async def add_buttons(self, message: discord.Message):
         async def abstain_callback(interaction: Interaction):
@@ -351,6 +315,16 @@ class Theorycrafting(BaseCog):
             if user_id in poll["voters"]:
                 old = poll["voters"][user_id]
                 poll["voters"][user_id] = ["Abstain"]
+
+                for vote in old:
+                    if vote == "Abstain":
+                        poll["options"]['Abstain'] -= 1
+                        continue
+
+                    poll['options'][list(poll['options'])[ord(vote)-ord('A')]] -= 1
+
+
+                poll["options"]['Abstain'] += 1
 
                 await self.update_db(message.id)
 
@@ -367,6 +341,8 @@ class Theorycrafting(BaseCog):
 
             poll["voters"][user_id] = ["Abstain"]
             
+            poll["options"]['Abstain'] += 1
+            
             await self.update_db(message.id)
 
             embed = message.embeds[0]
@@ -379,6 +355,28 @@ class Theorycrafting(BaseCog):
 
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
+
+
+        async def results_callback(interaction: Interaction):
+            poll = self.cache[message.id]
+
+            user_id = hash(str(interaction.user.id))
+
+            if user_id in poll["voters"]:
+                embed = discord.Embed(title="Report", description=f"You voted for {list_to_string(poll['voters'][user_id])}\n\n__Results:__{self.get_results(message.id)}")
+
+                await self.results_log(interaction.user)
+
+                await interaction.response.send_message(embed=embed, ephemeral=True)
+
+                return
+
+            embed = discord.Embed(title="Error", description="You must vote before you can view the results.", colour=Colour.green())
+
+            await self.results_error_log(interaction.user)
+
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+
         
         abstain = Button(label="✨ABSTAIN✨", style=discord.ButtonStyle.blurple)
         abstain.callback = abstain_callback
@@ -386,7 +384,10 @@ class Theorycrafting(BaseCog):
         vote = Button(label="vote", style=discord.ButtonStyle.gray)
         vote.callback = self.get_captcha_callback(message)
 
-        view = View(abstain, vote, timeout=None)
+        results = Button(label="results", style=discord.ButtonStyle.gray)
+        results.callback = results_callback
+
+        view = View(abstain, vote, results, timeout=None)
 
         await message.edit(view=view)
     
@@ -424,6 +425,9 @@ class Theorycrafting(BaseCog):
         options = []
         c = 'A'
         for option in self.cache[message.id]["options"]:
+            if option == 'Abstain':
+                continue
+
             options.append(discord.SelectOption(
                 label=c,
                 value=c,
@@ -451,6 +455,21 @@ class Theorycrafting(BaseCog):
                 old = poll["voters"][user_id]
                 poll["voters"][user_id] = votes.values
 
+                for vote in old:
+                    if vote == "Abstain":
+                        poll["options"]['Abstain'] -= 1
+                        continue
+
+                    poll['options'][list(poll['options'])[ord(vote)-ord('A')]] -= 1
+
+
+                for vote in poll["voters"][user_id]:
+                    if vote == "Abstain":
+                        poll["options"]['Abstain'] += 1
+                        continue
+
+                    poll['options'][list(poll['options'])[ord(vote)-ord('A')]] += 1 #please kms if this doesn't work
+
                 await self.update_db(message.id)
 
                 embed = discord.Embed(
@@ -465,6 +484,13 @@ class Theorycrafting(BaseCog):
 
 
             poll["voters"][user_id] = votes.values
+            
+            for vote in poll["voters"][user_id]:
+                if vote == "Abstain":
+                    poll["options"]['Abstain'] += 1
+                    continue
+
+                poll['options'][list(poll['options'])[ord(vote)-ord('A')]] += 1 
             
             await self.update_db(message.id)
 
@@ -543,26 +569,38 @@ class Theorycrafting(BaseCog):
 
             await chn.send(embed=embed)
 
+    async def results_log(self, member):
+        embed = discord.Embed(title="Member viewed the results", description=f"Member {member.mention}`{member.name}#{member.discriminator}` viewed the results",
+                colour=Colour.blue(), timestamp=datetime.now())
+
+        if self.cache[self._id]["log"]:
+            chn = await self.guild.fetch_channel(self.cache[self._id]["log"])
+
+            await chn.send(embed=embed)
+
+    async def results_error_log(self, member):
+        embed = discord.Embed(title="Member tried to view the results", description=f"Member {member.mention}`{member.name}#{member.discriminator}` tried to view the results but has not voted.",
+                colour=Colour.red(), timestamp=datetime.now())
+
+        if self.cache[self._id]["log"]:
+            chn = await self.guild.fetch_channel(self.cache[self._id]["log"])
+
+            await chn.send(embed=embed)
+
 
     def get_results(self, messageid):
-        votes = [0] * (len(self.cache[messageid]["options"]))
-        abstain_votes = 0
-
-        for voter in self.cache[messageid]["voters"].values():
-            for vote in voter:
-                if vote == "Abstain":
-                    abstain_votes += 1
-                    continue
-                votes[ord(vote) - ord('A')] += 1
-
         message = ""
 
         c = 'A'
-        for v in votes:
+
+        for k, v in self.cache[messageid]["options"].items():
+            if k == 'Abstain':
+                continue
             message += f"\n**{c}: **{v}"
             c = chr(ord(c)+1)
 
-        message += f"\n**Abstain: **{abstain_votes}"
+        message += f"\n**Abstain: **{self.cache[messageid]['options']['Abstain']}"
+
         return message
 
 

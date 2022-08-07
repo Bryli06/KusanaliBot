@@ -38,7 +38,7 @@ class Countdown(BaseCog):
         
         self.guild: discord.Guild = await self.bot.fetch_guild(self.bot.config["guild_id"])
         
-        self.bot.tasks_done = self.bot.tasks_done + 1
+        await self.bot.increment_tasks()
 
             
 
