@@ -19,7 +19,7 @@ from PIL import Image, ImageFont, ImageDraw
 class Countdown(BaseCog):
     _id = "countdown"
 
-    kusanali_drop = 1665903600 #november 16th 2022
+    kusanali_drop = 1667347200 #november 2th 2022
 
     default_cache = { }
 
