@@ -880,7 +880,10 @@ class Logging(BaseCog):
 #-----------------------------------Media Log------------------------------#
     @commands.Cog.listener()
     async def on_message(self, message):
-        if message.author.bot or message.channel.id in self.cache["ignoreChannel"]:
+        if message.author.bot:
+            return
+
+        if message.channel.id in self.cache["ignoreChannel"]:
             return
 
         for attachment in message.attachments:
