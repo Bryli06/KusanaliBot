@@ -298,6 +298,9 @@ class Logging(BaseCog):
         if before.author.bot:
             return
 
+        if after.channel.id in self.cache["ignoreChannel"]:
+            return
+
         if before.content == after.content:
             await self.embed_check(after)
             return
