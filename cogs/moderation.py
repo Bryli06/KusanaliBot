@@ -127,9 +127,9 @@ class Moderation(BaseCog):
 
         description = ""
         for member_id in member_ids:
-            member = await self.bot.fetch_user(int(member_id))
-
-            if member == None:
+            try:
+                member = await self.bot.fetch_user(int(member_id))
+            except Exception:
                 description += f"The member with ID `{member_id}` was not found.\n"
                 continue
             
@@ -348,9 +348,9 @@ class Moderation(BaseCog):
 
         description = ""
         for member_id in member_ids:
-            member = await self.guild.fetch_member(int(member_id))
-
-            if member == None:
+            try:
+                member = await self.guild.fetch_member(int(member_id))
+            except Exception:
                 description += f"The member with ID `{member_id}` was not found.\n"
                 continue
 
@@ -498,9 +498,9 @@ class Moderation(BaseCog):
 
         description = ""
         for member_id in member_ids:
-            member: discord.Member = await self.guild.fetch_member(int(member_id))
-
-            if member == None:
+            try:
+                member: discord.Member = await self.guild.fetch_member(int(member_id))
+            except Exception:
                 description += f"The member with ID `{member_id}` was not found.\n"
                 continue
 
@@ -724,9 +724,9 @@ class Moderation(BaseCog):
 
         description = ""
         for member_id in member_ids:
-            member: discord.Member = await self.bot.fetch_user(int(member_id))
-
-            if member == None:
+            try:
+                member: discord.Member = await self.bot.fetch_user(int(member_id))
+            except Exception:
                 description += f"The member with ID `{member_id}` was not found.\n"
                 continue
 
@@ -797,7 +797,10 @@ class Moderation(BaseCog):
         await ctx.respond(embed=embed)
 
         for member_id in member_ids:
-            member: discord.User = await self.bot.fetch_user(int(member_id))
+            try:
+                member: discord.User = await self.bot.fetch_user(int(member_id))
+            except Exception:
+                continue
 
             if member == None or len(self.cache["warns"][str(member_id)]) == 0:
                 continue
@@ -895,9 +898,9 @@ class Moderation(BaseCog):
 
         description = ""
         for member_id in member_ids:
-            member: discord.Member = await self.bot.fetch_user(int(member_id))
-
-            if member == None:
+            try:
+                member: discord.Member = await self.bot.fetch_user(int(member_id))
+            except Exception:
                 description += f"The member with ID `{member_id}` was not found.\n"
                 continue
 
@@ -951,7 +954,10 @@ class Moderation(BaseCog):
         await ctx.respond(embed=embed)
 
         for member_id in member_ids:
-            member: discord.User = await self.bot.fetch_user(int(member_id))
+            try:
+                member: discord.User = await self.bot.fetch_user(int(member_id))
+            except Exception:
+                continue
 
             if member == None or len(self.cache["notes"][str(member_id)]) == 0:
                 continue

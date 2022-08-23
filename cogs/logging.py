@@ -65,6 +65,14 @@ class Logging(BaseCog):
         if embed.image == None:
             embed.remove_image()
 
+
+
+#--------------------------------------TC logs---------------------------------------#
+
+    async def on_member_tc_mute(self, ctx):
+        embed = Embed(title="Member Muted", )
+
+
 #--------------------------------------moderation logs---------------------------------------#
 
     @commands.Cog.listener()
