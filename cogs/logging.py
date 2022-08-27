@@ -943,6 +943,9 @@ class Logging(BaseCog):
                             
             await channel.send(content=url, embed=embed)
 
+        if value > 0.6:
+            await message.delete()
+
 
 
     @ _lg.command(name="set", description="Sets a logs channel.")

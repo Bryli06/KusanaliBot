@@ -28,6 +28,9 @@ class AutoMod(BaseCog):
         if message.author.bot:
             return
 
+        if message.author.guild_permissions.administrator:
+            return
+
         # checks for actions to execute
         delete = False
 

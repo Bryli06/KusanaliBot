@@ -1,7 +1,8 @@
 import discord
+import numpy as np
 from discord.ext import commands
 
-from discord import Colour
+from discord import Colour, ApplicationContext
 
 from core import checks
 from core.base_cog import BaseCog
@@ -10,13 +11,15 @@ from core.checks import PermissionLevel
 class Chances(BaseCog):
     _id = "chances"
 
-    def __deterministic(constellations=0, wishes=0):
+    default_cache = {}
+
+    def __deterministic(self, constellations=0, wishes=0, P=0.006, ramp_rate=0.06):
         base = np.zeros((91,))
         base[0] = 0
         base[1:74] = P
         base[90] = 1
         for i in range(74, 90):
-            base[i] = P + rampRate * (i-73)
+            base[i] = P + ramp_rate * (i-73)
         ones = np.ones((91,))
         temp = ones - base
         basePDF = np.zeros((91,))
@@ -32,13 +35,14 @@ class Chances(BaseCog):
             fullPDF = np.convolve(fullPDF, doublePDF)
         return (fullPDF.cumsum()[wishes])
 
-    @commands.slash_command(name="chances", description="Calculates your odds of getting a 5* and all constelations based on how many primogems/wishes/pity you have right now")
+    @commands.slash_command(name="chances", description="Calculates your odds of getting a 5* and all constelations")
+    @checks.has_permissions(PermissionLevel.REGULAR)
     async def chances (self, ctx: ApplicationContext, 
             primogems: discord.Option(int, "How many primogems you have"), 
             pity: discord.Option(int, "What pity are you at right now"),
             guarantee: discord.Option(bool, "Do you have guarantee or are you at 50/50")):
 
-        wishes = primogems // 160 + pity + guarantee * 2
+        wishes = primogems // 160 + pity + guarantee * 90
         
         embed = discord.Embed().from_dict({
             "title" : "Chances calculator",
@@ -84,3 +88,6 @@ class Chances(BaseCog):
 
         await ctx.respond(embed=embed)
 
+
+def setup(bot):
+    bot.add_cog(Chances(bot))
