@@ -915,6 +915,9 @@ class Logging(BaseCog):
                             
                     await channel.send(file=file, embed=embed)
 
+                if value > 0.6:
+                    await message.delete()
+
         await self.embed_check(message)
 
 
