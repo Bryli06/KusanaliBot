@@ -93,35 +93,35 @@ class Countdown(BaseCog):
         minutes = diff.minutes
         seconds = diff.seconds
 
-        if years > 1:
+        if years >= 1:
             if months >= 6:
                 years += 1
 
             await channel.edit(name=f"{name}: {years} years")
             await asyncio.sleep(31556952)
 
-        elif months > 1:
+        elif months >= 1:
             if days > 15:
                 months += 1
 
             await channel.edit(name=f"{name}: {months} months")
             await asyncio.sleep(2629800)
 
-        elif days > 1:
+        elif days >= 1:
             if hours >= 12:
                 days += 1
 
             await channel.edit(name=f"{name}: {days} days")
             await asyncio.sleep(86400)
 
-        elif hours > 1:
+        elif hours >= 1:
             if minutes >= 30:
                 hours += 1
 
             await channel.edit(name=f"{name}: {hours} hours")
             await asyncio.sleep(3600)
 
-        elif minutes > 1:
+        elif minutes >= 1:
             if seconds >= 30:
                 minutes += 1
             await channel.edit(name=f"{name}: {minutes} minutes")
