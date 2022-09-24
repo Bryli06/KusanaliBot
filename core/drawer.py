@@ -27,18 +27,18 @@ def inverse(exp):
 def next_level(exp):
     return equation(inverse(exp))
 
-def attach(source: Image.Image, target: Image.Image, percent, mode=(1, 1)):
+def attach(source: Image.Image, target: Image.Image, mask, percent, mode=(1, 1)):
     pos = (int(source.size[0] * percent[0] - target.size[0] * mode[0] / 2),
            int(source.size[1] * percent[1] - target.size[1] * mode[1] / 2))
 
-    source.paste(target, pos, target)
+    source.paste(target, pos, mask)
     
-def make_circle(img, fill):
+def make_circle(img, fill=0):
     mask = Image.new("L", img.size, fill)
     draw = ImageDraw.Draw(mask)
     draw.ellipse((0,0,img.size[0], img.size[1]), fill=255)
     
-    img.putalpha(mask)
+    return mask
     
 def get_text_dimensions(text_string, font):
     ascent, descent = font.getmetrics()
@@ -60,8 +60,8 @@ def create_rank_card(url, exp, name, rank, upload=False):
     progress = (base_exp - diff) / base_exp
 
     avatar = Image.open(requests.get(url, stream=True).raw)
-    avatar = avatar.resize((350, 350))
-    make_circle(avatar, fill)
+    avatar = avatar.resize((350, 350)).convert("RGBA")
+    mask = make_circle(avatar)
 
     bg = Image.open("./assets/KusanaliRank.png")
     bg = bg.convert("RGBA")
@@ -78,7 +78,7 @@ def create_rank_card(url, exp, name, rank, upload=False):
     
     draw.rounded_rectangle((((base.size[0] - w)/2,(base.size[1]-h)/2), ((base.size[0] + w)/2,(base.size[1]+h)/2)),radius = 40, fill=(0,0,0)+(fill,))
     
-    attach(base, avatar, (0.2, 0.42))
+    attach(base, avatar, mask, (0.2, 0.42))
     
     length = 1150
     width = 30
