@@ -1,7 +1,7 @@
 version: "3.9"
 services:
   bot:
-    image: kusanali-bot:latest 
+    image: bryli06/kusanali-bot 
     restart: always
     env_file:
       - .env
