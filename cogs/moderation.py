@@ -1055,7 +1055,7 @@ class Moderation(BaseCog):
 
             return
 
-        if duration > 21600:
+        if seconds > 21600:
             embed = discord.Embed(
                 title="Error", description=f"Duration {seconds}s too large. Maximum slowmode is 6h (21600s).", colour=Colour.red())
             await ctx.respond(embed=embed)
@@ -1065,10 +1065,10 @@ class Moderation(BaseCog):
         if not channel:
             channel = ctx.channel
 
-        await channel.edit(slowmode_delay=duration)
+        await channel.edit(slowmode_delay=seconds)
 
         embed = discord.Embed(
-            title="Success", description=f"Successfully set slowmode in {channel.mention} to {duration}s.", colour=Colour.green())
+            title="Success", description=f"Successfully set slowmode in {channel.mention} to {seconds}s.", colour=Colour.green())
         await ctx.respond(embed=embed)
 
     @commands.slash_command(name="purge", description="Purge messages.", default_member_permissions=Permissions(manage_messages=True))
