@@ -1,5 +1,6 @@
 import discord
 import numpy as np
+import math
 from discord.ext import commands
 
 from discord import Colour, ApplicationContext
@@ -12,79 +13,53 @@ class Chances(BaseCog):
     _id = "chances"
 
     default_cache = {}
-
-    def __deterministic(self, constellations=0, wishes=0, P=0.006, ramp_rate=0.06):
-        base = np.zeros((91,))
-        base[0] = 0
-        base[1:74] = P
-        base[90] = 1
-        for i in range(74, 90):
-            base[i] = P + ramp_rate * (i-73)
-        ones = np.ones((91,))
-        temp = ones - base
-        basePDF = np.zeros((91,))
-        for i in range(91):
-            basePDF[i] = np.prod(temp[0:i]) * base[i]
-        doublePDF = np.zeros((181,))
-        doublePDF[0:91] += basePDF
-        for i in range(1, 90):
-            doublePDF[i:i+91] += basePDF[i]*basePDF
-        doublePDF *= 0.5
-        fullPDF = doublePDF
-        for i in range(constellations):
-            fullPDF = np.convolve(fullPDF, doublePDF)
-        return (fullPDF.cumsum()[wishes])
-
+    
     @commands.slash_command(name="chances", description="Calculates your odds of getting a 5* and all constelations")
     @checks.has_permissions(PermissionLevel.REGULAR)
     async def chances (self, ctx: ApplicationContext, 
-            primogems: discord.Option(int, "How many primogems you have"), 
+            wishes: discord.Option(int, "How many primogems you have"), 
             pity: discord.Option(int, "What pity are you at right now"),
             guarantee: discord.Option(bool, "Do you have guarantee or are you at 50/50")):
+        
+        guarantee = 1 if guarantee else 0
 
-        wishes = primogems // 160 + pity + guarantee * 90
+        P = 0.006
+        ramp_rate = 0.06
+        
+        cum_prob = np.zeros((91,))
+        cum_prob[0] = 0
+        cum_prob[1:74] = P
+        cum_prob[90] = 1
+        for i in range(74, 90):
+            cum_prob[i] = P + ramp_rate * (i-73)
+        ones = np.ones((91,))
+        complement = ones - cum_prob
+
+        base_gf_coefficents = np.zeros((91, ))
+        for i in range(91):
+            base_gf_coefficents[i] = np.prod(complement[0:i]) * cum_prob[i]
+
+        gf_coefficents = np.zeros((14, 1 + 90*14))
+
+        pity_sum = np.cumsum(base_gf_coefficents)[pity]
+
+        gf_coefficents[0][pity+1:91] = base_gf_coefficents[pity+1:] / (1-pity_sum)
+
+        for i in range(1, 14):
+            for j in range(1, 90*i+1):
+                gf_coefficents[i][j: j+91] += gf_coefficents[i-1][j] * base_gf_coefficents[0:91]
+
+
+        five_star_prob = gf_coefficents.cumsum(axis=1)[:, wishes+pity]
         
         embed = discord.Embed().from_dict({
             "title" : "Chances calculator",
             "description" : "Odds are calculated with the primogems you inputed, if you wish to calculate for a future banner make an estimate of primogems you'll have there",
             "color" : 4888823,
-            "fields" : [
-            {
-                "name" : "C0",
-                "value" : str(self.__deterministic(0, wishes))[:5],
-                "inline" : True
-            },
-            {
-                "name" : "C1",
-                "value" : str(self.__deterministic(1, wishes))[:5],
-                "inline" : True
-            },
-            {
-                "name" : "C2",
-                "value" : str(self.__deterministic(2, wishes))[:5],
-                "inline" : True
-            },
-            {
-                "name" : "C3",
-                "value" : str(self.__deterministic(3, wishes))[:5],
-                "inline" : True
-            },
-            {
-                "name" : "C4",
-                "value" : str(self.__deterministic(4, wishes))[:5],
-                "inline" : True
-            },
-            {
-                "name" : "C5",
-                "value" : str(self.__deterministic(5, wishes))[:5],
-                "inline" : True
-            },
-            {
-                "name" : "C6",
-                "value" : str(self.__deterministic(6, wishes))[:5],
-                "inline" : True
-            }]
         })
+
+        for i in range(7):
+            embed.add_field(name=f"C{i}", value=f"{round(100 * np.dot([math.comb(i+1-guarantee, j)/(2 ** (i+1-guarantee)) for j in range(i+2-guarantee) ], five_star_prob[i:2*i+2-guarantee]), 1)}")
 
         await ctx.respond(embed=embed)
 
