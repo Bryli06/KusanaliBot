@@ -3,6 +3,7 @@ import numpy as np
 import math
 from discord.ext import commands
 
+
 from discord import Colour, ApplicationContext
 
 from core import checks
@@ -17,7 +18,7 @@ class Chances(BaseCog):
     @commands.slash_command(name="chances", description="Calculates your odds of getting a 5* and all constelations")
     @checks.has_permissions(PermissionLevel.REGULAR)
     async def chances (self, ctx: ApplicationContext, 
-            wishes: discord.Option(int, "How many primogems you have"), 
+            wishes: discord.Option(int, "How many fates you have"), 
             pity: discord.Option(int, "What pity are you at right now"),
             guarantee: discord.Option(bool, "Do you have guarantee or are you at 50/50")):
         
@@ -54,12 +55,12 @@ class Chances(BaseCog):
         
         embed = discord.Embed().from_dict({
             "title" : "Chances calculator",
-            "description" : "Odds are calculated with the primogems you inputed, if you wish to calculate for a future banner make an estimate of primogems you'll have there",
+            "description" : "Odds are calculated with the rolls you inputed, if you wish to calculate for a future banner make an estimate of how many pulls you'll have there",
             "color" : 4888823,
         })
 
         for i in range(7):
-            embed.add_field(name=f"C{i}", value=f"{round(100 * np.dot([math.comb(i+1-guarantee, j)/(2 ** (i+1-guarantee)) for j in range(i+2-guarantee) ], five_star_prob[i:2*i+2-guarantee]), 1)}")
+            embed.add_field(name=f"C{i}", value=f"{np.format_float_positional((100 * np.dot([math.comb(i+1-guarantee, j)/(2 ** (i+1-guarantee)) for j in range(i+2-guarantee) ], five_star_prob[i:2*i+2-guarantee])), precision=4, unique=False, fractional=False, trim='k')}%")
 
         await ctx.respond(embed=embed)
 
