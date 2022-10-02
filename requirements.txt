@@ -45,7 +45,7 @@ packaging==21.3
 parsedatetime==2.6
 Pillow==9.2.0
 platformdirs==2.5.2
-protobuf==3.19.4
+protobuf==3.19.5
 psutil==5.9.1
 py-cord==2.0.0rc1
 pyasn1==0.4.8
