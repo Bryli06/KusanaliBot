@@ -123,7 +123,7 @@ def five_star_weapon(wishes, pity):
 
     embed = discord.Embed().from_dict({
         "title" : "Weapon banner chances calculator",
-        "description" : "If you wish to understand the math behind this calculation, view the explanation [here](https://drive.google.com/file/d/13qG7guYeqb7C1rGQ0krshWpIRcho9rfh/view?usp=sharing)",
+        "description" : "If you wish to understand the math behind this calculation, view the explanation [here](https://drive.google.com/file/d/1EECcjNVpfiOTqRoS48hHWqH2Ake902vq/view?usp=sharing)",
         "color" : 4888823,
     })
 
