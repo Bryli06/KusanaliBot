@@ -30,16 +30,9 @@ class Chances(BaseCog):
                 discord.OptionChoice("N/A", 0)
                 ])):
 
-        if banner == 0:
-            embed = five_star_character(wishes,pity,guarantee)
-
-        elif banner == 1:
-            embed = five_star_weapon(wishes, pity)
-        else:
-            embed = None
-
+                embed = discord.Embed(title="Error", description="This command has been migrated to <@881355198180765736>. You can invite the bot to your own server [here](http://kusanalimains.com/invite/)", color=Colour.red())
         await ctx.respond(embed=embed)
-
+"""
 def five_star_character(wishes, pity, guarantee):
         
     P = 0.006
@@ -131,7 +124,7 @@ def five_star_weapon(wishes, pity):
         embed.add_field(name=f"R{i+1}", value=f"{np.format_float_positional((100 * np.dot(path_gf_coefficents[i][1:], five_star_prob[:])), precision=4, unique=False, fractional=False, trim='k')}%") 
 
     return embed
-
+"""
 
 
 def setup(bot):
