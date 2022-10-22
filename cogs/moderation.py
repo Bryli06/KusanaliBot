@@ -703,8 +703,8 @@ class Moderation(BaseCog):
 
 #----------------------------------------Warn----------------------------------------#
 
-    @commands.slash_command(name="warn", description="Warns a member.", default_member_permissions=Permissions(manage_messages=True))
-    @checks.has_permissions(PermissionLevel.TRIAL_MOD)
+    @commands.slash_command(name="warn", description="Warns a member.")
+    @checks.has_permissions(PermissionLevel.TC_MOD)
     async def warn(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to warn."),
                    reason: discord.Option(str, description="Warn reason.", default="No reason given.")):
         """
@@ -877,8 +877,8 @@ class Moderation(BaseCog):
 
 #----------------------------------------Note----------------------------------------#
 
-    @commands.slash_command(name="note", description="Write a note about a member", default_member_permissions=Permissions(manage_messages=True))
-    @checks.has_permissions(PermissionLevel.TRIAL_MOD)
+    @commands.slash_command(name="note", description="Write a note about a member")
+    @checks.has_permissions(PermissionLevel.TC_MOD)
     async def note(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to write a note about."),
                    note: discord.Option(str, description="Note")):
         """
