@@ -30,7 +30,7 @@ class Chances(BaseCog):
                 discord.OptionChoice("N/A", 0)
                 ])):
 
-                embed = discord.Embed(title="Error", description="This command has been migrated to <@881355198180765736>. You can invite the bot to your own server [here](http://kusanalimains.com/invite/)", color=Colour.red())
+        embed = discord.Embed(title="Error", description="This command has been migrated to <@881355198180765736>. You can invite the bot to your own server [here](http://kusanalimains.com/invite/)", color=Colour.red())
         await ctx.respond(embed=embed)
 """
 def five_star_character(wishes, pity, guarantee):
