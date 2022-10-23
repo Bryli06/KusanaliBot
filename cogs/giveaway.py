@@ -32,9 +32,9 @@ class Giveaway(BaseCog):
                 self.cache[_id] = document
 
             docs = await cursor.to_list(length=10)
-        
+
         self.guild: discord.Guild = await self.bot.fetch_guild(self.bot.config["guild_id"])
-        
+
         await self.bot.increment_tasks()
 
     async def update_db(self, _id): #we need a different insert command that allows us to insert into seperate documents
@@ -43,13 +43,13 @@ class Giveaway(BaseCog):
             return
 
         await self.db.find_one_and_update(
-            {"_id": _id},
-            {"$set": self.cache[_id]},
-            upsert=True,
-        )
+                {"_id": _id},
+                {"$set": self.cache[_id]},
+                upsert=True,
+                )
 
     _ga = SlashCommandGroup("giveaway", "Contains all giveaway commands.",
-                            default_member_permissions=Permissions(manage_messages=True))
+            default_member_permissions=Permissions(manage_messages=True))
 
     async def after_load(self):
         self.loop_cache = {}
@@ -74,15 +74,15 @@ class Giveaway(BaseCog):
 
         # get the channel the giveaway is in
         channel: TextChannel = await self.guild.fetch_channel(
-            self.cache[message_id]["channel"])
+                self.cache[message_id]["channel"])
 
         # try fetching the message
         try:
             message = await channel.fetch_message(message_id)
         except Exception as e:
             self.bot.dispatch("error", e,
-                              f"There seems to be an active giveaway in {channel.mention} that the bot cannot access.",
-                              f"Delete the giveaway in {channel.mention} manually `ID: {message_id}`.")
+                    f"There seems to be an active giveaway in {channel.mention} that the bot cannot access.",
+                    f"Delete the giveaway in {channel.mention} manually `ID: {message_id}`.")
 
             self.cache.pop(message_id)
             await self.update_db(message_id)
@@ -115,15 +115,15 @@ class Giveaway(BaseCog):
             # stops if user has already joined giveaway
             if str(interaction.user.id) in giveaway["participants"]:
                 embed = discord.Embed(
-                    title="Error", description="You can't enter more than once.", colour=Colour.red())
+                        title="Error", description="You can't enter more than once.", colour=Colour.red())
                 await interaction.response.send_message(embed=embed, ephemeral=True)
 
                 return
-            
+
 
             if set(roles) & set(giveaway["bannedRoles"]):
                 embed = discord.Embed(
-                    title="Error", description="You possess a banned role.", colour=Colour.red())
+                        title="Error", description="You possess a banned role.", colour=Colour.red())
                 await interaction.response.send_message(embed=embed, ephemeral=True)
 
                 return
@@ -131,18 +131,18 @@ class Giveaway(BaseCog):
             # stops if user does not have any of the roles needed to enter
             if not (set(roles) & set(giveaway["requiredRoles"])) and giveaway["requiredRoles"]:
                 embed = discord.Embed(
-                    title="Error", description="You do not possess any of the required roles needed to enter.", colour=Colour.red())
+                        title="Error", description="You do not possess any of the required roles needed to enter.", colour=Colour.red())
                 await interaction.response.send_message(embed=embed, ephemeral=True)
 
                 return
 
-                
+
             # adds user to the participants list
             giveaway["participants"][str(interaction.user.id)] = roles
             await self.update_db(message.id)
 
             embed = discord.Embed(
-                title="Success", description="You've entered the giveaway!", colour=Colour.green())
+                    title="Success", description="You've entered the giveaway!", colour=Colour.green())
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
         enter = Button(label="Enter", style=discord.ButtonStyle.blurple)
@@ -163,7 +163,7 @@ class Giveaway(BaseCog):
     async def _giveaway_end(self, message: discord.Message):
         """
         Ends an active giveaway.
-        
+
         """
 
         if not message or message.id not in self.cache:
@@ -177,14 +177,14 @@ class Giveaway(BaseCog):
         participants = giveaway["participants"]
         tickets = giveaway["tickets"]
         reward = giveaway["reward"]
-        
+
         participant_ids = []
         participant_weights = []
 
         for member_id, roles in list(participants.items()):
             if (not (set(roles) & set(required_roles)) and required_roles) or set(roles) & set(banned_roles):
                 continue
-            
+
             roles_with_tickets = set(map(int, tickets.keys())) & set(roles)
 
             weight = 1
@@ -194,11 +194,11 @@ class Giveaway(BaseCog):
 
             participant_weights.append(weight)
             participant_ids.append(member_id)
-        
+
         # end giveaway with no winners
         if len(participant_ids) == 0:
             embed = discord.Embed(
-                title="Giveaway has ended!", description="The giveaway has ended with no winners.", colour=Colour.blue())
+                    title="Giveaway has ended!", description="The giveaway has ended with no winners.", colour=Colour.blue())
 
             await message.edit(embed=embed, view=None)
 
@@ -214,7 +214,7 @@ class Giveaway(BaseCog):
         if winners >= len(participant_ids):
             winner_ids = participant_ids
             winner_weights = participant_weights
-            
+
             participant_ids = []
             participant_weights = []
         else:
@@ -226,7 +226,7 @@ class Giveaway(BaseCog):
                 winner_ids.append(participant_ids.pop(index))
                 winner_weights.append(participant_weights.pop(index))
 
-        
+
         giveaway["participant_weights"] = participant_weights
         giveaway["participant_ids"] = participant_ids
 
@@ -251,7 +251,7 @@ class Giveaway(BaseCog):
 
         self.cache[message.id]["ended"] = True
         await self.update_db(message.id)
-        
+
     @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member):
         if before.bot:
@@ -259,7 +259,7 @@ class Giveaway(BaseCog):
 
         if before.roles == after.roles:
             return
-        
+
         for _id, giveaway in self.cache.items():
             if not giveaway["ended"] and str(before.id) in giveaway["participants"]:
                 role_id = []
@@ -279,20 +279,20 @@ class Giveaway(BaseCog):
         # stop if the message is not a giveaway
         if message_id not in self.cache:
             embed = discord.Embed(
-                title="Error", description="Message is not an active giveaway.")
+                    title="Error", description="Message is not an active giveaway.")
             await ctx.respond(embed=embed, ephemeral=True)
 
             return
-        
+
         channel: TextChannel = await self.guild.fetch_channel(
-            self.cache[message_id]["channel"])
-        
+                self.cache[message_id]["channel"])
+
         try:
             message = await channel.fetch_message(message_id)
         except Exception as e:
             self.bot.dispatch("error", e,
-                              f"There seems to be an active giveaway in {channel.mention} that the bot cannot access.",
-                              f"Delete the giveaway in {channel.mention} manually `ID: {message_id}`.")
+                    f"There seems to be an active giveaway in {channel.mention} that the bot cannot access.",
+                    f"Delete the giveaway in {channel.mention} manually `ID: {message_id}`.")
 
             self.cache.pop(message_id)
             await self.update_db(message_id)
@@ -302,7 +302,7 @@ class Giveaway(BaseCog):
         self.giveaway_end(message)
 
         embed = discord.Embed(
-            title="Success", description="Giveaway was ended.", colour=Colour.green())
+                title="Success", description="Giveaway was ended.", colour=Colour.green())
         await ctx.respond(embed=embed, ephemeral=True)
 
 
@@ -314,28 +314,28 @@ class Giveaway(BaseCog):
                 OptionChoice("Winners", 1), OptionChoice("End", 2), OptionChoice("Required Roles", 3),
                 OptionChoice("Banned Roles", 4), OptionChoice("Tickets", 5)]), value: discord.Option(str, "Value to change to.", default="")):
 
-        await ctx.defer()
+                await ctx.defer()
 
         message_id = int(message_id)
         # stop if the message is not a giveaway
         if message_id not in self.cache:
             embed = discord.Embed(
-                title="Error", description="Message is not an active giveaway.")
+                    title="Error", description="Message is not an active giveaway.")
             await ctx.respond(embed=embed, ephemeral=True)
 
             return
 
         giveaway = self.cache[message_id]
-        
+
         channel: TextChannel = await self.guild.fetch_channel(
-            giveaway["channel"])
-        
+                giveaway["channel"])
+
         try:
             message = await channel.fetch_message(message_id)
         except Exception as e:
             self.bot.dispatch("error", e,
-                              f"There seems to be an active giveaway in {channel.mention} that the bot cannot access.",
-                              f"Delete the giveaway in {channel.mention} manually `ID: {message_id}`.")
+                    f"There seems to be an active giveaway in {channel.mention} that the bot cannot access.",
+                    f"Delete the giveaway in {channel.mention} manually `ID: {message_id}`.")
 
             self.cache.pop(message_id)
             await self.update_db(message_id)
@@ -367,7 +367,7 @@ class Giveaway(BaseCog):
 
             except InvalidTime as e:
                 embed = discord.Embed(
-                    title="error", description=e, colour=Colour.red())
+                        title="error", description=e, colour=Colour.red())
                 await ctx.respond(embed=embed, ephemeral=True)
 
                 return
@@ -375,11 +375,11 @@ class Giveaway(BaseCog):
             # stop if amount is 0
             if duration == 0:
                 embed = discord.Embed(
-                    title=f"Error", description="Time cannot be 0.", colour=Colour.red())
+                        title=f"Error", description="Time cannot be 0.", colour=Colour.red())
                 ctx.respond(embed=embed)
 
                 return
-            
+
             giveaway["unixEndTime"] = int(duration.final.timestamp())
             await self.update_db(message_id)
 
@@ -410,14 +410,14 @@ class Giveaway(BaseCog):
                         embed.set_field_at(index=i, name="Roles allowed to participate",value=description)
                     else:
                         embed.remove_field(i)
-                    
+
                     description = None
 
                     break
 
             if description:
                 embed.add_field(name="Roles allowed to participant", value=description)
-            
+
             await message.edit(embed=embed)
 
 
@@ -438,14 +438,14 @@ class Giveaway(BaseCog):
                         embed.set_field_at(index=i, name="Roles banned from participating",value=description)
                     else:
                         embed.remove_field(i)
-                    
+
                     description = None
 
                     break
 
             if description:
                 embed.add_field(name="Roles banned from participating", value=description)
-            
+
             await message.edit(embed=embed)
 
         elif field == 5:
@@ -465,47 +465,47 @@ class Giveaway(BaseCog):
                         embed.set_field_at(index=i, name="Additional Role Ticktes",value=description)
                     else:
                         embed.remove_field(i)
-                    
+
                     description = None
 
                     break
 
             if description:
                 embed.add_field(name="Additional Role Ticktes", value=description)
-            
+
             await message.edit(embed=embed)
 
         embed = discord.Embed(
-            title="Success", description="Giveaway was edited.", colour=Colour.green())
+                title="Success", description="Giveaway was edited.", colour=Colour.green())
         await ctx.respond(embed=embed, ephemeral=True)
-        
-            
 
-        
+
+
+
 
 
     @_ga.command(name="create", description="Creates a new giveaway")
     @checks.has_permissions(PermissionLevel.EVENT_ADMIN)
     async def _ga_create(self, ctx: ApplicationContext, reward: discord.Option(str, "The name of the reward."),
-                         winners: discord.Option(int, "The number of winners.", min_value=1),
-                         end: discord.Option(str, "How long is the giveaway."), 
-                         required_roles: discord.Option(str, "The required roles", default=""),
-                         banned_roles: discord.Option(str, "The roles that are not allowed to join", default=""),
-                         tickets: discord.Option(str, "How many tickets to give to roles", default="")):
+            winners: discord.Option(int, "The number of winners.", min_value=1),
+            end: discord.Option(str, "How long is the giveaway."), 
+            required_roles: discord.Option(str, "The required roles", default=""),
+            banned_roles: discord.Option(str, "The roles that are not allowed to join", default=""),
+            tickets: discord.Option(str, "How many tickets to give to roles", default="")):
         """
         Creates a new giveaway.
 
         """
 
         await ctx.defer(ephemeral=True)
-        
+
         duration = 0
         try:
             duration = TimeConverter(end)
 
         except InvalidTime as e:
             embed = discord.Embed(
-                title="error", description=e, colour=Colour.red())
+                    title="error", description=e, colour=Colour.red())
             await ctx.respond(embed=embed)
 
             return
@@ -513,18 +513,18 @@ class Giveaway(BaseCog):
         # stop if amount is 0
         if duration == 0:
             embed = discord.Embed(
-                title=f"Error", description="Time cannot be 0.", colour=Colour.red())
+                    title=f"Error", description="Time cannot be 0.", colour=Colour.red())
             ctx.respond(embed=embed)
 
             return
-        
+
         required = await self.parse_roles(required_roles)
         banned = await self.parse_roles(banned_roles)
         weights = await self.parse_tickets(tickets)
         embed = discord.Embed(title=f"{reward} giveaway!", description=f"A giveaway has started and will end on <t:{int(duration.final.timestamp())}:F>!\n{winners} participant{'s' if winners > 1 else ''} will be selected at the end.", colour=Colour.blue())
 
         embed.set_author(name=f"Host: {ctx.author.display_name}", icon_url=ctx.author.display_avatar)
-        embed.set_footer(text="Powered by Paimon's Bargins! Find them at .gg/paimonsbargins")
+        embed.set_footer(text="Powered by Paimon's Bargains! Find them at .gg/paimonsbargains")
 
         value = ""
         if required:
