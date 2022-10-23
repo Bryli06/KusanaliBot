@@ -356,7 +356,7 @@ class Giveaway(BaseCog):
             giveaway["winners"] = int(value)
             await self.update_db(message_id)
 
-            embed.description = f"A giveaway has started and will end on <t:{giveaway['unixEndTime']}:F>!\n{giveaway['winners']} participant{'s' if giveaway['winners'] > 1 else ''} will be selected at the end."
+            embed.description = f"A giveaway has started and will end on <t:{giveaway['unixEndTime']}:F>!\n> **{giveaway['winners']} winner{'s' if giveaway['winners'] > 1 else ''}** will be selected at the end.\n\n*Powered by* ***Paimon's Bargains!*** *(https://discord.gg/paimonsbargains)*"
 
             await message.edit(embed=embed)
 
@@ -383,7 +383,7 @@ class Giveaway(BaseCog):
             giveaway["unixEndTime"] = int(duration.final.timestamp())
             await self.update_db(message_id)
 
-            embed.description = "A giveaway has started and will end on <t:{giveaway['unixEndTime']}:F>!\n> **{giveaway['winners']} winner{'s' if giveaway['winners'] > 1 else ''}** will be selected at the end.\n\nPowered by Paimon's Bargains! (https://discord.gg/paimonsbargains)"
+            embed.description = f"A giveaway has started and will end on <t:{giveaway['unixEndTime']}:F>!\n> **{giveaway['winners']} winner{'s' if giveaway['winners'] > 1 else ''}** will be selected at the end.\n\n*Powered by* ***Paimon's Bargains!*** *(https://discord.gg/paimonsbargains)*"
 
             await message.edit(embed=embed)
 
@@ -462,7 +462,7 @@ class Giveaway(BaseCog):
                 if f.name.startswith("Additional"):
 
                     if description:
-                        embed.set_field_at(index=i, name="Additional Role Ticktes",value=description)
+                        embed.set_field_at(index=i, name="Additional Role Tickets",value=description)
                     else:
                         embed.remove_field(i)
 
@@ -521,7 +521,7 @@ class Giveaway(BaseCog):
         required = await self.parse_roles(required_roles)
         banned = await self.parse_roles(banned_roles)
         weights = await self.parse_tickets(tickets)
-        embed = discord.Embed(title=f"{reward} giveaway!", description=f"A giveaway has started and will end on <t:{int(duration.final.timestamp())}:F>!\n> **{winners} winner{'s' if winners > 1 else ''}** will be selected at the end.\n\nPowered by Paimon's Bargains! (https://discord.gg/paimonsbargains)", colour=Colour.blue())
+        embed = discord.Embed(title=f"{reward} giveaway!", description=f"A giveaway has started and will end on <t:{int(duration.final.timestamp())}:F>!\n> **{winners} winner{'s' if winners > 1 else ''}** will be selected at the end.\n\n*Powered by* ***Paimon's Bargains!*** *(https://discord.gg/paimonsbargains)*", colour=Colour.blue())
 
         embed.set_author(name=f"Host: {ctx.author.display_name}", icon_url=ctx.author.display_avatar)
         embed.set_footer(text="Make sure to press the \"Enter\" button below to enter the giveaway!")
@@ -545,7 +545,7 @@ class Giveaway(BaseCog):
             for k, v in weights.items():
                 value += f"<@&{k}>: {v} ticket{'' if v==1 else 's'}\n"
 
-            embed.add_field(name="Additional Role Ticktes", value=value)
+            embed.add_field(name="Additional Role Tickets", value=value)
                 
         class confirmButton(discord.ui.Button):
             def __init__(self, giveaway):
