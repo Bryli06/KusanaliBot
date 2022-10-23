@@ -524,6 +524,7 @@ class Giveaway(BaseCog):
         embed = discord.Embed(title=f"{reward} giveaway!", description=f"A giveaway has started and will end on <t:{int(duration.final.timestamp())}:F>!\n{winners} participant{'s' if winners > 1 else ''} will be selected at the end.", colour=Colour.blue())
 
         embed.set_author(name=f"Host: {ctx.author.display_name}", icon_url=ctx.author.display_avatar)
+        embed.set_footer(text="Powered by [Paimon's Bargins](https://discord.gg/paimonsbargins)")
 
         value = ""
         if required:
