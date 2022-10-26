@@ -208,7 +208,7 @@ class Leveling(BaseCog):
                 embed = discord.Embed(
                     title="Error", description="The database is empty.", colour=Colour.red())
 
-                await ctx.interaction.edit_original_message(embed=embed)
+                await ctx.interaction.edit_original_response(embed=embed)
                 return
 
             pages = math.ceil(len(cache.keys()) / users_page)
@@ -217,7 +217,7 @@ class Leveling(BaseCog):
                 embed = discord.Embed(
                     title="Error", description=f"There are only {pages} pages in the leaderboard.", colour=Colour.red())
 
-                await ctx.interaction.edit_original_message(embed=embed)
+                await ctx.interaction.edit_original_response(embed=embed)
                 return
 
             sort = sorted(cache.items(), key=lambda x: x[1], reverse=True)[
@@ -240,7 +240,7 @@ class Leveling(BaseCog):
 
             lb_view = View(left, close, right)
 
-            await ctx.interaction.edit_original_message(embed=embed, view=lb_view)
+            await ctx.interaction.edit_original_response(embed=embed, view=lb_view)
 
         await show_top(page)
         await ctx.delete(delay=60)

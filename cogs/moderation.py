@@ -815,7 +815,7 @@ class Moderation(BaseCog):
             embed.description += "".join([f"Responsible: <@{warn['responsible']}> Reason: {warn['reason'] if not '' else 'No reason given'}\n\n"
                                           for warn in self.cache["warns"][str(member_id)]])
 
-            await ctx.interaction.edit_original_message(embed=embed, view=warn_view)
+            await ctx.interaction.edit_original_response(embed=embed, view=warn_view)
 
             await warn_view.wait()
 
@@ -972,7 +972,7 @@ class Moderation(BaseCog):
             embed.description += "".join([f"Responsible: <@{note['responsible']}> Note: {note['note']}\n\n"
                                           for note in self.cache["notes"][str(member_id)]])
 
-            await ctx.interaction.edit_original_message(embed=embed, view=note_view)
+            await ctx.interaction.edit_original_response(embed=embed, view=note_view)
 
             await note_view.wait()
 
@@ -1087,7 +1087,7 @@ class Moderation(BaseCog):
             title="Success", description=f"Successfully purged {len(deleted)} messages.", colour=Colour.green())
         message = await ctx.respond(embed=embed)
 
-        await message.delete_original_message(delay=3)
+        await message.delete_original_response(delay=3)
 
 
     @commands.slash_command(name="bonk", description="Bonk your enemies.", default_member_permissions=Permissions(manage_messages=True))
