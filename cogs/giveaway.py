@@ -136,14 +136,14 @@ class Giveaway(BaseCog):
 
                 return
 
-
+            await interaction.response.defer()
             # adds user to the participants list
             giveaway["participants"][str(interaction.user.id)] = roles
             await self.update_db(message.id)
 
             embed = discord.Embed(
                     title="Success", description="You've entered the giveaway!", colour=Colour.green())
-            await interaction.response.send_message(embed=embed, ephemeral=True)
+            await interaction.followup.send(embed=embed, ephemeral=True)
 
         enter = Button(label="Enter", style=discord.ButtonStyle.blurple)
         enter.callback = _enter_callback
