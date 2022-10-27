@@ -143,7 +143,6 @@ class Giveaway(BaseCog):
 
             embed = discord.Embed(
                     title="Success", description="You've entered the giveaway!", colour=Colour.green())
-            print(embed)
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
         enter = Button(label="Enter", style=discord.ButtonStyle.blurple)
