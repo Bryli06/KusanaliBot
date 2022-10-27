@@ -136,6 +136,8 @@ class Giveaway(BaseCog):
 
                 return
 
+            interaction.response.defer()
+
 
             # adds user to the participants list
             giveaway["participants"][str(interaction.user.id)] = roles
