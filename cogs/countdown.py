@@ -19,7 +19,7 @@ from PIL import Image, ImageFont, ImageDraw
 class Countdown(BaseCog):
     _id = "countdown"
 
-    kusanali_drop = 1667347200 #november 2th 2022
+    kusanali_drop = 1667358000 #november 2th 2022
 
     default_cache = { }
 
@@ -62,9 +62,9 @@ class Countdown(BaseCog):
             self.bot.loop.create_task(self.start_countdown(k))
 
     async def start_countdown(self, channel_id):
-        channel = await self.guild.fetch_channel(int(channel_id))
-
-        if not channel:
+        try: 
+            channel = await self.guild.fetch_channel(int(channel_id))
+        except: 
             self.cache.pop(str(channel_id))
             await self.update_db(str(channel_id))
             
