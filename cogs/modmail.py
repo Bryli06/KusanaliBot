@@ -6,7 +6,7 @@ from enum import Enum
 from base64 import b64encode
 from discord.ext import commands
 
-from discord import ApplicationContext, Colour, Permissions
+from discord import ApplicationContext, Colour, Permissions, OptionChoice
 
 from core import checks
 from core.base_cog import BaseCog
@@ -23,6 +23,8 @@ class Modmail(BaseCog):
 
     default_cache = {
         "modmail_channel_id": None,
+
+        "adminmail_channel_id": None,
 
         "modmail_role_id": None,
 
@@ -103,6 +105,9 @@ class Modmail(BaseCog):
     async def check_modmail(self):
         if self.cache[self._id]["modmail_role_id"] and self.cache[self._id]["modmail_channel_id"]:
             self.modmail_channel = await self.guild.fetch_channel(self.cache[self._id]["modmail_channel_id"])
+
+        if self.cache[self._id]["modmail_role_id"] and self.cache[self._id]["adminmail_channel_id"]:
+            self.adminmail_channel = await self.guild.fetch_channel(self.cache[self._id]["adminmail_channel_id"])
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -397,7 +402,7 @@ class Modmail(BaseCog):
 
     @commands.slash_command(name="start", description="Starts a modmail session.")
     @commands.dm_only()
-    async def start(self, ctx: ApplicationContext, title: discord.Option(str, "The title of the thread."),
+    async def start(self, ctx: ApplicationContext, contact: discord.Option(int, "Staff team to contact", choices=[OptionChoice("Admin", 1), OptionChoice("Mod", 0)]), title: discord.Option(str, "The title of the thread."),
                     reason: discord.Option(str, "The reason for starting a modmail sessions.")):
         """
         Starts a new modmail thread. DM only command.
@@ -416,7 +421,10 @@ class Modmail(BaseCog):
 
         member = await self.guild.fetch_member(ctx.author.id)
 
-        thread: discord.Thread = await self.modmail_channel.create_thread(name=f"{ctx.author.id} — {title}")
+        if contact == 0:
+            thread: discord.Thread = await self.modmail_channel.create_thread(name=f"{title} — {ctx.author.id}")
+        else:
+            thread: discord.Thread = await self.adminmail_channel.create_thread(name=f"{title} — {ctx.author.id}")
 
         embed = discord.Embed(
             description=f"{ctx.author.mention}\nReason for mail: {reason}", timestamp=datetime.now(), colour=Colour.green())
@@ -453,6 +461,7 @@ class Modmail(BaseCog):
             "user": ctx.author.id,
             "channel": thread.id,
             "title": title,
+            "type": contact,
             "messages": [{
                             "message": reason, 
                             "author": ctx.author.id, 
@@ -566,16 +575,19 @@ class Modmail(BaseCog):
 
     @_chn.command(name="set", description="Sets modmail channel.")
     @checks.has_permissions(PermissionLevel.ADMINISTRATOR)
-    async def chn_set(self, ctx: discord.ApplicationContext, chn: discord.Option(discord.TextChannel, description="Channel to become modmail channel.")):
-        self.cache[self._id]["modmail_channel_id"] = chn.id
+    async def chn_set(self, ctx: discord.ApplicationContext,contact: discord.Option(int, "Staff team to contact", choices=[OptionChoice("Admin", 1), OptionChoice("Mod", 0)]), chn: discord.Option(discord.TextChannel, description="Channel to become modmail channel.")):
+        if contact == 1:
+            self.cache[self._id]["adminmail_channel_id"] = chn.id
+        else:
+            self.cache[self._id]["modmail_channel_id"] = chn.id
 
         await self.update_db(self._id)
 
-        await ctx.respond("Successfully set new modmail channel")
+        await ctx.respond("Successfully set new channel")
 
         await self.check_modmail()
 
-    @_role.command(name="set", description="Sets modmail channel.")
+    @_role.command(name="set", description="Sets modmail role.")
     @checks.has_permissions(PermissionLevel.ADMINISTRATOR)
     async def role_set(self, ctx: discord.ApplicationContext, role: discord.Option(discord.Role, description="Channel to become modmail channel.")):
         self.cache[self._id]["modmail_role_id"] = role.id
