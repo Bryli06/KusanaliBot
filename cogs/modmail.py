@@ -419,8 +419,6 @@ class Modmail(BaseCog):
 
             return
 
-        await ctx.defer()
-
         member = await self.guild.fetch_member(ctx.author.id)
 
         if contact == 0:
