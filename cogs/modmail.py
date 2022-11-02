@@ -419,6 +419,8 @@ class Modmail(BaseCog):
 
             return
 
+        await ctx.defer()
+
         member = await self.guild.fetch_member(ctx.author.id)
 
         if contact == 0:
@@ -576,6 +578,8 @@ class Modmail(BaseCog):
     @_chn.command(name="set", description="Sets modmail channel.")
     @checks.has_permissions(PermissionLevel.ADMINISTRATOR)
     async def chn_set(self, ctx: discord.ApplicationContext,contact: discord.Option(int, "Staff team to contact", choices=[OptionChoice("Admin", 1), OptionChoice("Mod", 0)]), chn: discord.Option(discord.TextChannel, description="Channel to become modmail channel.")):
+        await ctx.defer()
+
         if contact == 1:
             self.cache[self._id]["adminmail_channel_id"] = chn.id
         else:
