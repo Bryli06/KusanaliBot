@@ -1020,7 +1020,7 @@ class Moderation(BaseCog):
 
 #--------------------------------------------------------------------------------#
 
-    @commands.slash_command(name="slowmode", description="Sets slowmode for a channel.", default_member_permissions=Permissions(manage_channels=True))
+    @commands.slash_command(name="slowmode", description="Sets slowmode for a channel.")
     @checks.has_permissions(PermissionLevel.TC_MOD)
     async def slowmode(self, ctx: ApplicationContext, duration: discord.Option(str, description="The duration of the slowmode."),
                        channel: discord.Option(discord.TextChannel, description="The channel you want to set slowmode.", default=None)):
