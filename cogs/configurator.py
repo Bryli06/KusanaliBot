@@ -153,7 +153,9 @@ class Configurator(BaseCog):
                discord.OptionChoice("Event Admin", "eventAdmin"),
                discord.OptionChoice("Mod", "mod"),
                discord.OptionChoice("Trial Mod", "trialMod"),
+               discord.OptionChoice("Senior Theorycraft Mod", "seniorTcMod"),
                discord.OptionChoice("Theorycraft Mod", "tcMod"),
+               discord.OptionChoice("Trial Theorycraft Mod", "trialTcMod"),
                discord.OptionChoice("Event Mod", "eventMod")]
 
     @_mod.command(name="set", description="Sets mod roles.")

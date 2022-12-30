@@ -94,7 +94,7 @@ class Moderation(BaseCog):
 
     @commands.slash_command(name="ban", description="Bans a member", default_member_permissions=Permissions(ban_members=True))
     @commands.max_concurrency(1, wait=True)
-    @checks.has_permissions(PermissionLevel.TRIAL_MOD)
+    @checks.has_permissions(PermissionLevel.SENIOR_TC_MOD)
     async def ban(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to ban."),
                   duration: discord.Option(str, description="The duration of the ban.", default="inf"),
                   reason: discord.Option(str, description="Reason for ban.", default="No reason given.")):
@@ -191,7 +191,7 @@ class Moderation(BaseCog):
 
     @commands.slash_command(name="unban", description="Unbans a member", default_member_permissions=Permissions(ban_members=True))
     @commands.max_concurrency(1, wait=True)
-    @checks.has_permissions(PermissionLevel.MOD)
+    @checks.has_permissions(PermissionLevel.SENIOR_TC_MOD)
     async def unban(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to unban."),
                     reason: discord.Option(str, description="Reason for unban.", default="No reason given.")):
         """
@@ -1021,7 +1021,7 @@ class Moderation(BaseCog):
 #--------------------------------------------------------------------------------#
 
     @commands.slash_command(name="slowmode", description="Sets slowmode for a channel.", default_member_permissions=Permissions(manage_channels=True))
-    @checks.has_permissions(PermissionLevel.MOD)
+    @checks.has_permissions(PermissionLevel.TC_MOD)
     async def slowmode(self, ctx: ApplicationContext, duration: discord.Option(str, description="The duration of the slowmode."),
                        channel: discord.Option(discord.TextChannel, description="The channel you want to set slowmode.", default=None)):
         """

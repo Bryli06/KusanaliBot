@@ -636,7 +636,7 @@ class Theorycrafting(BaseCog):
 
     @_tc.command(name="mute", description="Mutes a member")
     @commands.max_concurrency(1, wait=True)
-    @checks.has_permissions(PermissionLevel.TC_MOD)
+    @checks.has_permissions(PermissionLevel.TRIAL_TC_MOD)
     async def mute(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to mute."),
                    duration: discord.Option(str, description="The duration of the mute.", default="inf"),
                    reason: discord.Option(str, description="Reason for mute.", default="No reason given.")):
@@ -743,7 +743,7 @@ class Theorycrafting(BaseCog):
 
     @_tc.command(name="unmute", description="Unmutes a member.", default_member_permissions=Permissions(manage_messages=True))
     @commands.max_concurrency(1, wait=True)
-    @checks.has_permissions(PermissionLevel.TC_MOD)
+    @checks.has_permissions(PermissionLevel.TRIAL_TC_MOD)
     async def unmute(self, ctx: ApplicationContext, members: discord.Option(str, description="The members you want to unmute."),
                      reason: discord.Option(str, description="Reason for unmute.", default="No reason given.")):
         """

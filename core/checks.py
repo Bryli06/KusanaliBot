@@ -22,24 +22,28 @@ class PermissionLevel(Enum):
     STAFF = 1
     
     # section mods
-    TC_MOD = 2
-    EVENT_MOD = 3
+    EVENT_MOD = 2
+
+    # tc section
+    TRIAL_TC_MOD = 3
+    TC_MOD = 4
+    SENIOR_TC_MOD = 5
     
     # trial mods
-    TRIAL_MOD = 4
+    TRIAL_MOD = 6
 
     # regular mods
-    MOD = 5
+    MOD = 7
 
     # section admins
-    EVENT_ADMIN = 6
-    TC_ADMIN = 7
+    EVENT_ADMIN = 8
+    TC_ADMIN = 9
 
     # admins
-    ADMINISTRATOR = 8
+    ADMINISTRATOR = 10
 
     # owner
-    OWNER = 9
+    OWNER = 11 
     
 
 def only_modmail_thread(modmail_channel_id) -> Callable[[T], T]:
@@ -121,18 +125,36 @@ async def check_permissions(ctx: commands.Context, permission_level) -> bool:
     else:
         raise commands.CheckFailure("You do not have the required permissions.")
 
-    # check for section mod
+    # check for Senior TC mod
     if permission_level is not PermissionLevel.TRIAL_MOD:
-        if  ctx.author.get_role(ctx.bot.config["tcMod"]) != None:
+        if ctx.author.get_role(ctx.bot.config["seniorTcMod"]) != None:
             return True
+    else:
+        raise commands.CheckFailure("You do not have the required permissions.")
 
+    # check for TC mod
+    if permission_level is not PermissionLevel.SENIOR_TC_MOD:
+        if ctx.author.get_role(ctx.bot.config["tcMod"]) != None:
+            return True
+    else:
+        raise commands.CheckFailure("You do not have the required permissions.")
+
+    # check for Trial TC mod
+    if permission_level is not PermissionLevel.TC_MOD:
+        if ctx.author.get_role(ctx.bot.config["trialTcMod"]) != None:
+            return True
+    else:
+        raise commands.CheckFailure("You do not have the required permissions.")
+
+    # check for section mod
+    if permission_level is not PermissionLevel.TRIAL_TC_MOD:
         if  ctx.author.get_role(ctx.bot.config["eventMod"]) != None:
             return True
     else:
         raise commands.CheckFailure("You do not have the required permissions.")
 
     # check for staff
-    if permission_level is not PermissionLevel.TC_MOD and permission_level is not PermissionLevel.EVENT_MOD:
+    if permission_level is not PermissionLevel.EVENT_MOD:
         if ctx.channel.permissions_for(ctx.author).manage_messages:
             return True
     else:
