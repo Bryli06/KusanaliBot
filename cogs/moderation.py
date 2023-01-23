@@ -824,7 +824,7 @@ class Moderation(BaseCog):
         await ctx.delete()
 
     @commands.slash_command(name="warns", description="Lists all warns for a member.", default_member_permissions=Permissions(manage_messages=True))
-    @checks.has_permissions(PermissionLevel.TRIAL_MOD)
+    @checks.has_permissions(PermissionLevel.TC_MOD)
     async def warns(self, ctx: ApplicationContext, member: discord.Option(discord.Member, description="The members you want to get warns for.")):
         """
         Lists all the warns for a member
