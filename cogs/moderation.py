@@ -981,7 +981,7 @@ class Moderation(BaseCog):
         await ctx.delete()
 
     @commands.slash_command(name="notes", description="Lists all notes for a member", default_member_permissions=Permissions(manage_messages=True))
-    @checks.has_permissions(PermissionLevel.TRIAL_MOD)
+    @checks.has_permissions(PermissionLevel.TC_MOD)
     async def notes(self, ctx: ApplicationContext, member: discord.Option(discord.Member, description="The members you want to get notes.")):
         """
         Lists all the notes for a member
