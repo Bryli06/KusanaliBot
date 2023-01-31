@@ -430,7 +430,7 @@ class Modmail(BaseCog):
             thread: discord.Thread = await self.modmail_channel.create_thread(name=f"{title} — {ctx.author.id}")
         elif contact == 1:
             thread: discord.Thread = await self.adminmail_channel.create_thread(name=f"{title} — {ctx.author.id}")
-        else
+        else: 
             thread: discord.Thread = await self.tcmail_channel.create_thread(name=f"{title} — {ctx.author.id}")
 
         embed = discord.Embed(
