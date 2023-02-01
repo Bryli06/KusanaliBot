@@ -301,7 +301,7 @@ class Modmail(BaseCog):
 
 
     @commands.slash_command(name="reply", description="Replies to a user in a modmail thread.", default_member_permissions=Permissions(manage_threads=True))
-    @checks.has_permissions(PermissionLevel.TRIAL_MOD)
+    @checks.has_permissions(PermissionLevel.TRIAL_TC_MOD)
     async def reply(self, ctx: ApplicationContext, message: discord.Option(str, "The message you wish to reply with.")):
         """
         Replies to a modmail thread.
@@ -353,7 +353,7 @@ class Modmail(BaseCog):
         await self.update_db(thread_hash)
 
     @commands.slash_command(name="delete", description="Delete the most recently sent message in a modmail thread.", default_member_permissions=Permissions(manage_threads=True))
-    @checks.has_permissions(PermissionLevel.TRIAL_MOD)
+    @checks.has_permissions(PermissionLevel.TRIAL_TC_MOD)
     async def delete(self, ctx: ApplicationContext):
         """
         Replies to a modmail thread.
