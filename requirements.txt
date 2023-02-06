@@ -39,7 +39,7 @@ motor==3.0.0
 multidict==6.0.2
 networkx==2.8.5
 numpy==1.23.2
-oauthlib==3.2.0
+oauthlib==3.2.2
 opt-einsum==3.3.0
 packaging==21.3
 parsedatetime==2.6
