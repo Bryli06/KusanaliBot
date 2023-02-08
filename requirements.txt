@@ -13,7 +13,7 @@ cffi==1.15.1
 chardet==4.0.0
 charset-normalizer==2.0.12
 colorama==0.4.4
-cryptography==37.0.4
+cryptography==39.0.1
 dateparser==1.1.1
 distlib==0.3.4
 dnspython==2.2.1
