@@ -611,6 +611,7 @@ class Giveaway(BaseCog):
         Ends an active giveaway.
         
         """
+        await ctx.defer()
 
         message_id = int(messageid)
 
