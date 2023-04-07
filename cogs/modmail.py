@@ -297,7 +297,7 @@ class Modmail(BaseCog):
         
         member = await self.guild.fetch_member(user)
         
-        await member.send("Session was closed by staff.")
+        await member.send("Session was closed due to inactivity. If you think this was a mistake, please create a new modmail")
 
 
     @commands.slash_command(name="reply", description="Replies to a user in a modmail thread.", default_member_permissions=Permissions(manage_threads=True))
